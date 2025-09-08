@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TradingDashboard } from '@/components/TradingDashboard';
 import { StockSelector } from '@/components/StockSelector';
+import { CryptoSelector } from '@/components/CryptoSelector';
 import { ModelConfiguration } from '@/components/ModelConfiguration';
 import { NewsAnalysis } from '@/components/NewsAnalysis';
 import { PortfolioOverview } from '@/components/PortfolioOverview';
@@ -19,6 +20,8 @@ interface StockData {
 const Index = () => {
   const [selectedStock, setSelectedStock] = useState('AAPL');
   const [stockData, setStockData] = useState<StockData | null>(null);
+  const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
+  const [cryptoData, setCryptoData] = useState<any>(null);
   const [modelConfig, setModelConfig] = useState({
     type: 'ARIMA',
     parameters: { p: 1, d: 1, q: 1 }
@@ -50,11 +53,29 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            <StockSelector 
-              selectedStock={selectedStock}
-              onStockChange={setSelectedStock}
-              onStockDataChange={setStockData}
-            />
+            <Tabs defaultValue="stocks" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="stocks">Stocks</TabsTrigger>
+                <TabsTrigger value="crypto">Crypto</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="stocks">
+                <StockSelector 
+                  selectedStock={selectedStock}
+                  onStockChange={setSelectedStock}
+                  onStockDataChange={setStockData}
+                />
+              </TabsContent>
+              
+              <TabsContent value="crypto">
+                <CryptoSelector 
+                  selectedCrypto={selectedCrypto}
+                  onCryptoChange={setSelectedCrypto}
+                  onCryptoDataChange={setCryptoData}
+                />
+              </TabsContent>
+            </Tabs>
+            
             <ModelConfiguration 
               config={modelConfig}
               onConfigChange={setModelConfig}

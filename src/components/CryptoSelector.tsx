@@ -1,0 +1,257 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, TrendingDown, Search, Loader2 } from 'lucide-react';
+
+interface CryptoSelectorProps {
+  selectedCrypto: string;
+  onCryptoChange: (crypto: string) => void;
+  onCryptoDataChange?: (cryptoData: CryptoData | null) => void;
+}
+
+interface CryptoData {
+  id: string;
+  symbol: string;
+  name: string;
+  price: number;
+  change24h: number;
+  changePercent24h: number;
+  volume24h?: string;
+  marketCap?: string;
+  image?: string;
+}
+
+export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataChange }: CryptoSelectorProps) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cryptoData, setCryptoData] = useState<CryptoData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [searchResults, setSearchResults] = useState<CryptoData[]>([]);
+
+  // Popular cryptocurrencies for quick selection
+  const popularCryptos = ['bitcoin', 'ethereum', 'binancecoin', 'solana', 'cardano', 'avalanche-2', 'polkadot', 'chainlink'];
+
+  const fetchCryptoData = async (cryptoId: string) => {
+    if (!cryptoId) return;
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Using CoinGecko API
+      const response = await fetch(`https://api.coingecko.com/api/v3/coins/${cryptoId.toLowerCase()}`);
+      
+      if (!response.ok) {
+        throw new Error('Cryptocurrency not found');
+      }
+      
+      const data = await response.json();
+      
+      const crypto: CryptoData = {
+        id: data.id,
+        symbol: data.symbol.toUpperCase(),
+        name: data.name,
+        price: data.market_data.current_price.usd,
+        change24h: data.market_data.price_change_24h,
+        changePercent24h: data.market_data.price_change_percentage_24h,
+        volume24h: data.market_data.total_volume.usd?.toLocaleString(),
+        marketCap: data.market_data.market_cap.usd ? (data.market_data.market_cap.usd / 1e9).toFixed(1) + 'B' : undefined,
+        image: data.image?.small
+      };
+      
+      setCryptoData(crypto);
+      onCryptoChange(data.id);
+      onCryptoDataChange?.(crypto);
+    } catch (err) {
+      setError('Failed to fetch cryptocurrency data. Please try again.');
+      console.error('Crypto fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchCryptos = async (query: string) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      const results = data.coins.slice(0, 5).map((coin: any) => ({
+        id: coin.id,
+        symbol: coin.symbol.toUpperCase(),
+        name: coin.name,
+        image: coin.thumb
+      }));
+      
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Search error:', err);
+    }
+  };
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      fetchCryptoData(searchQuery.trim().toLowerCase());
+      setSearchResults([]);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const handleQuickSelect = (cryptoId: string) => {
+    setSearchQuery(cryptoId);
+    fetchCryptoData(cryptoId);
+    setSearchResults([]);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    searchCryptos(value);
+  };
+
+  // Load default crypto on mount
+  useEffect(() => {
+    if (selectedCrypto && !cryptoData) {
+      fetchCryptoData(selectedCrypto);
+    } else if (!selectedCrypto) {
+      fetchCryptoData('bitcoin'); // Default to Bitcoin
+    }
+  }, [selectedCrypto]);
+
+  return (
+    <Card className="bg-card border-border shadow-card">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">Cryptocurrency Search & Selection</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Search Input */}
+        <div className="relative">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter crypto name or symbol (e.g., bitcoin, ETH)"
+              value={searchQuery}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleSearch} 
+              disabled={loading || !searchQuery.trim()}
+              size="icon"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            </Button>
+          </div>
+          
+          {/* Search Results Dropdown */}
+          {searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+              {searchResults.map((result) => (
+                <button
+                  key={result.id}
+                  onClick={() => handleQuickSelect(result.id)}
+                  className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2"
+                >
+                  {result.image && (
+                    <img src={result.image} alt={result.name} className="w-6 h-6 rounded-full" />
+                  )}
+                  <div>
+                    <div className="font-medium">{result.name}</div>
+                    <div className="text-sm text-muted-foreground">{result.symbol}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Quick Select Buttons */}
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs text-muted-foreground self-center">Popular:</span>
+          {popularCryptos.map((cryptoId) => (
+            <Button
+              key={cryptoId}
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuickSelect(cryptoId)}
+              className="h-7 text-xs capitalize"
+            >
+              {cryptoId === 'binancecoin' ? 'BNB' : 
+               cryptoId === 'avalanche-2' ? 'AVAX' : 
+               cryptoId.replace('-', ' ')}
+            </Button>
+          ))}
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        {/* Current Crypto Info */}
+        {cryptoData && (
+          <div className="p-4 rounded-lg bg-gradient-primary border border-border">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {cryptoData.image && (
+                  <img src={cryptoData.image} alt={cryptoData.name} className="w-8 h-8 rounded-full" />
+                )}
+                <div>
+                  <h3 className="font-bold text-lg">{cryptoData.symbol}</h3>
+                  <p className="text-xs text-muted-foreground truncate max-w-40">{cryptoData.name}</p>
+                </div>
+              </div>
+              <Badge variant={cryptoData.changePercent24h >= 0 ? "default" : "destructive"}>
+                {cryptoData.changePercent24h >= 0 ? (
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                ) : (
+                  <TrendingDown className="w-3 h-3 mr-1" />
+                )}
+                {cryptoData.changePercent24h > 0 ? '+' : ''}{cryptoData.changePercent24h.toFixed(2)}%
+              </Badge>
+            </div>
+            <div className="text-2xl font-bold mb-1">${cryptoData.price.toLocaleString()}</div>
+            <div className={`text-sm ${cryptoData.changePercent24h >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {cryptoData.changePercent24h >= 0 ? '+' : ''}${cryptoData.change24h?.toFixed(2)} (24h)
+            </div>
+          </div>
+        )}
+
+        {/* Quick Stats */}
+        {cryptoData && (
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="text-center p-2 rounded bg-muted">
+              <div className="text-xs text-muted-foreground">Volume (24h)</div>
+              <div className="font-semibold">${cryptoData.volume24h || 'N/A'}</div>
+            </div>
+            <div className="text-center p-2 rounded bg-muted">
+              <div className="text-xs text-muted-foreground">Market Cap</div>
+              <div className="font-semibold">${cryptoData.marketCap || 'N/A'}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && !cryptoData && (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            <span className="text-muted-foreground">Fetching cryptocurrency data...</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
