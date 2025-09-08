@@ -3,23 +3,35 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, TrendingDown, Activity, Target } from 'lucide-react';
 
+interface StockData {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+}
+
 interface TradingDashboardProps {
   selectedStock: string;
+  stockData?: StockData;
   modelConfig: {
     type: string;
     parameters: any;
   };
 }
 
-export const TradingDashboard = ({ selectedStock, modelConfig }: TradingDashboardProps) => {
-  // Mock data for demonstration
+export const TradingDashboard = ({ selectedStock, stockData, modelConfig }: TradingDashboardProps) => {
+  // Use real stock data if available, otherwise fall back to mock data
+  const currentPrice = stockData?.price || 175.43;
+  const currentChange = stockData?.changePercent || 1.33;
+  
   const analysisData = {
-    currentPrice: 175.43,
-    predictedPrice: 182.75,
+    currentPrice: currentPrice,
+    predictedPrice: currentPrice * 1.042, // 4.2% prediction increase as example
     confidence: 87.2,
-    trend: 'bullish',
-    volatility: 18.5,
-    riskScore: 6.2
+    trend: currentChange >= 0 ? 'bullish' : 'bearish',
+    volatility: Math.abs(currentChange) * 1.5 + 15, // Dynamic volatility based on price change
+    riskScore: Math.min(Math.abs(currentChange) * 0.8 + 4, 10)
   };
 
   const priceDiff = analysisData.predictedPrice - analysisData.currentPrice;

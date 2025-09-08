@@ -8,8 +8,17 @@ import { PredictionChart } from '@/components/PredictionChart';
 import { StopLossConfig } from '@/components/StopLossConfig';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+interface StockData {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+}
+
 const Index = () => {
   const [selectedStock, setSelectedStock] = useState('AAPL');
+  const [stockData, setStockData] = useState<StockData | null>(null);
   const [modelConfig, setModelConfig] = useState({
     type: 'ARIMA',
     parameters: { p: 1, d: 1, q: 1 }
@@ -44,6 +53,7 @@ const Index = () => {
             <StockSelector 
               selectedStock={selectedStock}
               onStockChange={setSelectedStock}
+              onStockDataChange={setStockData}
             />
             <ModelConfiguration 
               config={modelConfig}
@@ -65,6 +75,7 @@ const Index = () => {
               <TabsContent value="analysis" className="space-y-6">
                 <TradingDashboard 
                   selectedStock={selectedStock}
+                  stockData={stockData}
                   modelConfig={modelConfig}
                 />
               </TabsContent>
