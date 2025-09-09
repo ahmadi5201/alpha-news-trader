@@ -40,14 +40,15 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
     setError('');
     
     try {
-      // Using CoinGecko API
-      const response = await fetch(`https://api.coingecko.com/api/v3/coins/${cryptoId.toLowerCase()}`);
+      // Using CoinGecko API with CORS proxy
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/${cryptoId.toLowerCase()}`)}`);
       
       if (!response.ok) {
         throw new Error('Cryptocurrency not found');
       }
       
-      const data = await response.json();
+      const proxyResponse = await response.json();
+      const data = JSON.parse(proxyResponse.contents);
       
       const crypto: CryptoData = {
         id: data.id,
@@ -79,8 +80,9 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
     }
     
     try {
-      const response = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
-      const data = await response.json();
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`)}`);
+      const proxyResponse = await response.json();
+      const data = JSON.parse(proxyResponse.contents);
       
       const results = data.coins.slice(0, 5).map((coin: any) => ({
         id: coin.id,
