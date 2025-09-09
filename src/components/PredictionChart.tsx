@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, BarChart3, Activity } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TrendingUp, BarChart3, Activity, Clock } from 'lucide-react';
 
 interface PredictionChartProps {
   selectedStock: string;
@@ -11,7 +12,35 @@ export const PredictionChart = ({ selectedStock, modelType }: PredictionChartPro
   // Generate realistic prediction data with actual dates
   const today = new Date();
   const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   
+  // Generate hourly predictions for today and next 2 days
+  const generateHourlyPredictions = () => {
+    const predictions = [];
+    const basePrice = 175 + Math.random() * 50;
+    const currentHour = new Date().getHours();
+    
+    // Generate 48 hours of predictions (today + next 2 days)
+    for (let i = 0; i < 48; i++) {
+      const futureTime = new Date(today);
+      futureTime.setHours(currentHour + i + 1);
+      
+      // Generate price with hourly volatility
+      const volatility = (Math.random() - 0.5) * 0.005; // ±0.5% hourly volatility
+      const trendFactor = 1 + (i * 0.0002); // Slight trend
+      const price = basePrice * trendFactor * (1 + volatility);
+      
+      predictions.push({
+        date: formatDate(futureTime),
+        time: formatTime(futureTime),
+        fullDate: futureTime,
+        price: price,
+        confidence: Math.max(0.6, 0.95 - (i * 0.008)) // Decreasing confidence over time
+      });
+    }
+    return predictions;
+  };
+
   // Generate future dates for predictions
   const generatePredictions = () => {
     const predictions = [];
@@ -37,6 +66,52 @@ export const PredictionChart = ({ selectedStock, modelType }: PredictionChartPro
   };
 
   const predictions = generatePredictions();
+  const hourlyPredictions = generateHourlyPredictions();
+  
+  // Generate hourly buy/sell signals
+  const getHourlyBuySellSignals = () => {
+    const signals = [];
+    const currentPrice = hourlyPredictions[0]?.price || 175;
+    
+    // Find significant price movements for intraday signals
+    for (let i = 0; i < hourlyPredictions.length - 1; i++) {
+      const current = hourlyPredictions[i];
+      const next = hourlyPredictions[i + 1];
+      
+      if (next && current) {
+        const priceChange = ((next.price - current.price) / current.price) * 100;
+        
+        // Buy signal: quick dip (good for scalping)
+        if (priceChange < -0.8 && i < hourlyPredictions.length - 3) {
+          const futurePrice = hourlyPredictions[i + 2]?.price;
+          if (futurePrice && futurePrice > current.price) {
+            signals.push({
+              date: current.fullDate,
+              dateStr: `${current.date} ${current.time}`,
+              type: 'BUY',
+              price: current.price,
+              reason: 'Intraday dip - scalping opportunity',
+              confidence: current.confidence
+            });
+          }
+        }
+        
+        // Sell signal: quick gain (good for taking profits)
+        if (priceChange > 1.2 && current.confidence > 0.7) {
+          signals.push({
+            date: current.fullDate,
+            dateStr: `${current.date} ${current.time}`,
+            type: 'SELL',
+            price: current.price,
+            reason: 'Quick profit - intraday resistance',
+            confidence: current.confidence
+          });
+        }
+      }
+    }
+    
+    return signals.slice(0, 5); // Limit to 5 signals for hourly
+  };
   
   // Determine buy/sell signals based on price trends
   const getBuySellSignals = () => {
@@ -84,6 +159,7 @@ export const PredictionChart = ({ selectedStock, modelType }: PredictionChartPro
   };
 
   const buySellSignals = getBuySellSignals();
+  const hourlyBuySellSignals = getHourlyBuySellSignals();
 
   return (
     <div className="space-y-6">
@@ -219,7 +295,7 @@ export const PredictionChart = ({ selectedStock, modelType }: PredictionChartPro
         </Card>
       </div>
 
-      {/* Buy/Sell Signals */}
+      {/* Buy/Sell Signals with Tabs */}
       <Card className="bg-card border-border shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -228,38 +304,90 @@ export const PredictionChart = ({ selectedStock, modelType }: PredictionChartPro
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {buySellSignals.length > 0 ? (
-            <div className="space-y-4">
-              {buySellSignals.map((signal, index) => (
-                <div key={index} className={`p-4 rounded-lg border-2 ${
-                  signal.type === 'BUY' 
-                    ? 'bg-success/10 border-success/30' 
-                    : 'bg-warning/10 border-warning/30'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <Badge variant={signal.type === 'BUY' ? 'default' : 'secondary'} className="font-bold">
-                        {signal.type}
-                      </Badge>
-                      <div className="text-lg font-bold">${signal.price.toFixed(2)}</div>
-                      <div className="text-sm text-muted-foreground">on {signal.dateStr}</div>
+          <Tabs defaultValue="daily" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="daily" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Daily Signals
+              </TabsTrigger>
+              <TabsTrigger value="hourly" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Hourly Signals
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Daily Signals */}
+            <TabsContent value="daily" className="mt-4">
+              {buySellSignals.length > 0 ? (
+                <div className="space-y-4">
+                  {buySellSignals.map((signal, index) => (
+                    <div key={index} className={`p-4 rounded-lg border-2 ${
+                      signal.type === 'BUY' 
+                        ? 'bg-success/10 border-success/30' 
+                        : 'bg-warning/10 border-warning/30'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <Badge variant={signal.type === 'BUY' ? 'default' : 'secondary'} className="font-bold">
+                            {signal.type}
+                          </Badge>
+                          <div className="text-lg font-bold">${signal.price.toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">on {signal.dateStr}</div>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Confidence: </span>
+                          <span className="font-semibold">{Math.round(signal.confidence * 100)}%</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{signal.reason}</p>
                     </div>
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Confidence: </span>
-                      <span className="font-semibold">{Math.round(signal.confidence * 100)}%</span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{signal.reason}</p>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No strong buy/sell signals detected for the next 30 days</p>
-              <p className="text-xs">Continue monitoring for opportunities</p>
-            </div>
-          )}
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No strong buy/sell signals detected for the next 30 days</p>
+                  <p className="text-xs">Continue monitoring for opportunities</p>
+                </div>
+              )}
+            </TabsContent>
+            
+            {/* Hourly Signals */}
+            <TabsContent value="hourly" className="mt-4">
+              {hourlyBuySellSignals.length > 0 ? (
+                <div className="space-y-4">
+                  {hourlyBuySellSignals.map((signal, index) => (
+                    <div key={index} className={`p-4 rounded-lg border-2 ${
+                      signal.type === 'BUY' 
+                        ? 'bg-success/10 border-success/30' 
+                        : 'bg-warning/10 border-warning/30'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <Badge variant={signal.type === 'BUY' ? 'default' : 'secondary'} className="font-bold">
+                            {signal.type}
+                          </Badge>
+                          <div className="text-lg font-bold">${signal.price.toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">at {signal.dateStr}</div>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Confidence: </span>
+                          <span className="font-semibold">{Math.round(signal.confidence * 100)}%</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{signal.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No hourly signals detected for the next 48 hours</p>
+                  <p className="text-xs">Market conditions are stable</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
