@@ -12,9 +12,11 @@ interface ModelConfigurationProps {
     parameters: any;
   };
   onConfigChange: (config: any) => void;
+  onRunPrediction: () => void;
+  isRunning: boolean;
 }
 
-export const ModelConfiguration = ({ config, onConfigChange }: ModelConfigurationProps) => {
+export const ModelConfiguration = ({ config, onConfigChange, onRunPrediction, isRunning }: ModelConfigurationProps) => {
   const modelTypes = [
     { value: 'ARMA', label: 'ARMA', description: 'AutoRegressive Moving Average' },
     { value: 'ARIMA', label: 'ARIMA', description: 'AutoRegressive Integrated MA' },
@@ -93,9 +95,14 @@ export const ModelConfiguration = ({ config, onConfigChange }: ModelConfiguratio
             <span className="text-sm text-muted-foreground">Model Status</span>
             <Badge variant="outline" className="text-success border-success">Trained</Badge>
           </div>
-          <Button className="w-full" size="sm">
+          <Button 
+            className="w-full" 
+            size="sm" 
+            onClick={onRunPrediction}
+            disabled={isRunning}
+          >
             <PlayCircle className="w-4 h-4 mr-2" />
-            Run Prediction
+            {isRunning ? "Running..." : "Run Prediction"}
           </Button>
         </div>
 

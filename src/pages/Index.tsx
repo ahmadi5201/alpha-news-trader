@@ -8,6 +8,7 @@ import { PortfolioOverview } from '@/components/PortfolioOverview';
 import { PredictionChart } from '@/components/PredictionChart';
 import { StopLossConfig } from '@/components/StopLossConfig';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 interface StockData {
   symbol: string;
@@ -18,15 +19,43 @@ interface StockData {
 }
 
 const Index = () => {
+  const { toast } = useToast();
   const [selectedStock, setSelectedStock] = useState('AAPL');
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
   const [cryptoData, setCryptoData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('stocks');
+  const [isRunningPrediction, setIsRunningPrediction] = useState(false);
   const [modelConfig, setModelConfig] = useState({
     type: 'ARIMA',
     parameters: { p: 1, d: 1, q: 1 }
   });
+
+  const handleRunPrediction = async () => {
+    setIsRunningPrediction(true);
+    
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast({
+        title: "Prediction Complete",
+        description: `${modelConfig.type} model analysis finished for ${activeTab === 'stocks' ? selectedStock : selectedCrypto.toUpperCase()}`,
+      });
+      
+      // Here you would typically call your prediction API
+      // and update the relevant state/components
+      
+    } catch (error) {
+      toast({
+        title: "Prediction Failed",
+        description: "An error occurred while running the prediction model.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRunningPrediction(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,6 +109,8 @@ const Index = () => {
             <ModelConfiguration 
               config={modelConfig}
               onConfigChange={setModelConfig}
+              onRunPrediction={handleRunPrediction}
+              isRunning={isRunningPrediction}
             />
             <StopLossConfig />
           </div>
