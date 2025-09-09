@@ -11,19 +11,32 @@ interface StockData {
   changePercent: number;
 }
 
+interface CryptoData {
+  id: string;
+  symbol: string;
+  name: string;
+  price: number;
+  change24h: number;
+  changePercent24h: number;
+}
+
 interface TradingDashboardProps {
-  selectedStock: string;
-  stockData?: StockData;
+  selectedAsset: string;
+  assetData?: StockData | CryptoData;
+  assetType: string;
   modelConfig: {
     type: string;
     parameters: any;
   };
 }
 
-export const TradingDashboard = ({ selectedStock, stockData, modelConfig }: TradingDashboardProps) => {
-  // Use real stock data if available, otherwise fall back to mock data
-  const currentPrice = stockData?.price || 175.43;
-  const currentChange = stockData?.changePercent || 1.33;
+export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelConfig }: TradingDashboardProps) => {
+  // Handle both stock and crypto data
+  const isStock = assetType === 'stocks';
+  const currentPrice = assetData?.price || (isStock ? 175.43 : 50000);
+  const currentChange = isStock 
+    ? (assetData as StockData)?.changePercent || 1.33
+    : (assetData as CryptoData)?.changePercent24h || 2.5;
   
   const analysisData = {
     currentPrice: currentPrice,
@@ -101,7 +114,7 @@ export const TradingDashboard = ({ selectedStock, stockData, modelConfig }: Trad
       <Card className="bg-card border-border shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>{modelConfig.type} Analysis for {selectedStock}</span>
+            <span>{modelConfig.type} Analysis for {selectedAsset.toUpperCase()}</span>
             <Badge variant="outline">{analysisData.trend.toUpperCase()}</Badge>
           </CardTitle>
         </CardHeader>
@@ -161,14 +174,14 @@ export const TradingDashboard = ({ selectedStock, stockData, modelConfig }: Trad
             <h4 className="font-semibold mb-3">Prediction Timeline</h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {[
-                { period: '1 Day', price: 177.23, confidence: 92 },
-                { period: '1 Week', price: 180.45, confidence: 87 },
-                { period: '1 Month', price: 182.75, confidence: 76 },
-                { period: '3 Months', price: 185.20, confidence: 64 }
+                { period: '1 Day', multiplier: 1.01, confidence: 92 },
+                { period: '1 Week', multiplier: 1.03, confidence: 87 },
+                { period: '1 Month', multiplier: 1.05, confidence: 76 },
+                { period: '3 Months', multiplier: 1.08, confidence: 64 }
               ].map((prediction) => (
                 <div key={prediction.period} className="p-3 rounded-lg bg-gradient-primary border border-primary/20">
                   <div className="text-xs text-muted-foreground mb-1">{prediction.period}</div>
-                  <div className="font-bold">${prediction.price}</div>
+                  <div className="font-bold">${(currentPrice * prediction.multiplier).toFixed(2)}</div>
                   <div className="text-xs">
                     <Progress value={prediction.confidence} className="w-full h-1 mt-1" />
                     <span className="text-muted-foreground">{prediction.confidence}% confidence</span>

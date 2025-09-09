@@ -22,6 +22,7 @@ const Index = () => {
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
   const [cryptoData, setCryptoData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('stocks');
   const [modelConfig, setModelConfig] = useState({
     type: 'ARIMA',
     parameters: { p: 1, d: 1, q: 1 }
@@ -53,7 +54,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            <Tabs defaultValue="stocks" className="space-y-4">
+            <Tabs defaultValue="stocks" className="space-y-4" onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="stocks">Stocks</TabsTrigger>
                 <TabsTrigger value="crypto">Crypto</TabsTrigger>
@@ -95,8 +96,9 @@ const Index = () => {
 
               <TabsContent value="analysis" className="space-y-6">
                 <TradingDashboard 
-                  selectedStock={selectedStock}
-                  stockData={stockData}
+                  selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
+                  assetData={activeTab === 'stocks' ? stockData : cryptoData}
+                  assetType={activeTab}
                   modelConfig={modelConfig}
                 />
               </TabsContent>
