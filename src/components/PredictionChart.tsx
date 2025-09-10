@@ -26,7 +26,7 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
       return stockPrices[selectedAsset] || 175;
     } else {
       const cryptoPrices: Record<string, number> = {
-        'bitcoin': 67500, 'ethereum': 3420, 'solana': 142, 'sui': 1.85,
+        'bitcoin': 112332, 'ethereum': 3420, 'solana': 142, 'sui': 1.85,
         'aptos': 9.45, 'avalanche-2': 35.20, 'cardano': 0.62, 'polygon': 0.89
       };
       return cryptoPrices[selectedAsset] || 50000;
