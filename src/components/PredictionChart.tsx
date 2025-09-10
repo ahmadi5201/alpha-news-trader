@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +11,11 @@ interface PredictionChartProps {
 }
 
 export const PredictionChart = ({ selectedAsset, assetType, modelType }: PredictionChartProps) => {
+  // State for predictions to ensure they regenerate when asset changes
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [hourlyPredictions, setHourlyPredictions] = useState<any[]>([]);
+  const [generationSeed, setGenerationSeed] = useState(Math.random());
+  
   // Generate realistic prediction data with actual dates
   const today = new Date();
   const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -27,7 +33,12 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
     } else {
       const cryptoPrices: Record<string, number> = {
         'bitcoin': 112332, 'ethereum': 3420, 'solana': 142, 'sui': 1.85,
-        'aptos': 9.45, 'avalanche-2': 35.20, 'cardano': 0.62, 'polygon': 0.89
+        'aptos': 9.45, 'avalanche-2': 35.20, 'cardano': 0.62, 'polygon': 0.89,
+        'binancecoin': 645, 'the-open-network': 5.45, 'uniswap': 12.50, 'aave': 185,
+        'maker': 1750, 'compound-governance-token': 68, 'curve-dao-token': 0.89,
+        'sushi': 1.25, 'fetch-ai': 1.85, 'singularitynet': 0.65, 'ocean-protocol': 0.78,
+        'axie-infinity': 8.90, 'the-sandbox': 0.45, 'decentraland': 0.85,
+        'dogecoin': 0.42, 'shiba-inu': 0.000028, 'pepe': 0.0000125
       };
       return cryptoPrices[selectedAsset] || 50000;
     }
@@ -39,13 +50,19 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
     const basePrice = getBasePrice();
     const currentHour = new Date().getHours();
     
+    // Use seed for consistent randomness within the same render
+    const seededRandom = (seed: number) => {
+      const x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    };
+    
     // Generate 48 hours of predictions (today + next 2 days)
     for (let i = 0; i < 48; i++) {
       const futureTime = new Date(today);
       futureTime.setHours(currentHour + i + 1);
       
       // Generate price with more volatility for better signals
-      const volatility = (Math.random() - 0.5) * 0.02; // ±1% hourly volatility
+      const volatility = (seededRandom(generationSeed * 100 + i) - 0.5) * 0.02; // ±1% hourly volatility
       const trendFactor = 1 + (i * 0.0002); // Slight trend
       // Add some market cycles for more realistic signals
       const cycleFactor = Math.sin(i * 0.3) * 0.01;
@@ -67,12 +84,18 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
     const predictions = [];
     const basePrice = getBasePrice(); // Use the same function for consistency
     
+    // Use seed for consistent randomness within the same render
+    const seededRandom = (seed: number) => {
+      const x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    };
+    
     for (let i = 1; i <= 30; i++) {
       const futureDate = new Date(today);
       futureDate.setDate(today.getDate() + i);
       
       // Generate price with more volatility for better signals
-      const volatility = (Math.random() - 0.5) * 0.04; // ±2% daily volatility
+      const volatility = (seededRandom(generationSeed * 50 + i) - 0.5) * 0.04; // ±2% daily volatility
       const trendFactor = 1 + (i * 0.001); // Slight upward trend
       // Add market cycles for more realistic price movements
       const cycleFactor = Math.sin(i * 0.2) * 0.02;
@@ -88,8 +111,14 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
     return predictions;
   };
 
-  const predictions = generatePredictions();
-  const hourlyPredictions = generateHourlyPredictions();
+  // Effect to regenerate predictions when asset changes
+  useEffect(() => {
+    setGenerationSeed(Math.random());
+    const newPredictions = generatePredictions();
+    const newHourlyPredictions = generateHourlyPredictions();
+    setPredictions(newPredictions);
+    setHourlyPredictions(newHourlyPredictions);
+  }, [selectedAsset, assetType, modelType]);
   
   // Generate hourly buy/sell signals
   const getHourlyBuySellSignals = () => {
