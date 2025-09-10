@@ -41,8 +41,18 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
   const [trendingCryptos, setTrendingCryptos] = useState<TrendingCrypto[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
 
-  // Updated popular cryptocurrencies including trending ones
-  const popularCryptos = ['bitcoin', 'ethereum', 'solana', 'sui', 'aptos', 'avalanche-2', 'cardano', 'polygon'];
+  // Popular cryptocurrencies organized by categories
+  const cryptoCategories = {
+    'Top Coins': ['bitcoin', 'ethereum', 'binancecoin', 'solana', 'the-open-network', 'dogecoin'],
+    'Layer 1': ['ethereum', 'solana', 'avalanche-2', 'cardano', 'polkadot', 'near'],
+    'DeFi': ['uniswap', 'aave', 'maker', 'compound-governance-token', 'curve-dao-token', 'sushi'],
+    'AI & Data': ['fetch-ai', 'singularitynet', 'ocean-protocol', 'numeraire', 'cortex', 'deepbrain-chain'],
+    'Gaming': ['axie-infinity', 'the-sandbox', 'decentraland', 'enjincoin', 'gala', 'immutable-x'],
+    'Meme': ['dogecoin', 'shiba-inu', 'pepe', 'bonk', 'floki', 'baby-doge-coin']
+  };
+  
+  const [selectedCryptoCategory, setSelectedCryptoCategory] = useState<string>('Top Coins');
+  const allPopularCryptos = Object.values(cryptoCategories).flat();
 
   const fetchCryptoData = async (cryptoId: string) => {
     if (!cryptoId) return;
@@ -286,24 +296,43 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
           )}
         </div>
 
-        {/* Quick Select Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <span className="text-xs text-muted-foreground self-center">Popular:</span>
-          {popularCryptos.map((cryptoId) => (
-            <Button
-              key={cryptoId}
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickSelect(cryptoId)}
-              className="h-7 text-xs capitalize"
-            >
-              {cryptoId === 'binancecoin' ? 'BNB' : 
-               cryptoId === 'avalanche-2' ? 'AVAX' : 
-               cryptoId === 'sui' ? 'SUI' :
-               cryptoId === 'aptos' ? 'APT' :
-               cryptoId.replace('-', ' ')}
-            </Button>
-          ))}
+        {/* Category Selector */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Categories:</span>
+            {Object.keys(cryptoCategories).map((category) => (
+              <Button
+                key={category}
+                variant={selectedCryptoCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCryptoCategory(category)}
+                className="h-6 text-xs"
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Category Cryptos */}
+          <div className="flex flex-wrap gap-2">
+            <span className="text-xs text-muted-foreground self-center">{selectedCryptoCategory}:</span>
+            {cryptoCategories[selectedCryptoCategory as keyof typeof cryptoCategories].map((cryptoId) => (
+              <Button
+                key={cryptoId}
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickSelect(cryptoId)}
+                className="h-7 text-xs capitalize"
+              >
+                {cryptoId === 'binancecoin' ? 'BNB' : 
+                 cryptoId === 'avalanche-2' ? 'AVAX' : 
+                 cryptoId === 'the-open-network' ? 'TON' :
+                 cryptoId === 'curve-dao-token' ? 'CRV' :
+                 cryptoId === 'compound-governance-token' ? 'COMP' :
+                 cryptoId.replace('-', ' ')}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Trending Cryptocurrencies */}

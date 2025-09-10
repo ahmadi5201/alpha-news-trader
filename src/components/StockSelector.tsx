@@ -26,10 +26,20 @@ export const StockSelector = ({ selectedStock, onStockChange, onStockDataChange 
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Tech Giants');
 
-  // Popular stocks for quick selection
-  const popularStocks = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'META', 'NFLX'];
+  // Popular stocks organized by categories
+  const stockCategories = {
+    'Tech Giants': ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'META', 'NFLX'],
+    'Finance': ['JPM', 'BAC', 'WFC', 'GS', 'MS', 'C'],
+    'Healthcare': ['JNJ', 'PFE', 'UNH', 'ABBV', 'MRK', 'BMY'],
+    'Consumer': ['KO', 'PEP', 'WMT', 'HD', 'MCD', 'NKE'],
+    'Energy': ['XOM', 'CVX', 'COP', 'SLB', 'EOG', 'MPC'],
+    'Industrial': ['BA', 'CAT', 'GE', 'MMM', 'HON', 'LMT']
+  };
+  
+  const allPopularStocks = Object.values(stockCategories).flat();
 
   const fetchStockData = async (symbol: string) => {
     if (!symbol) return;
@@ -87,6 +97,53 @@ export const StockSelector = ({ selectedStock, onStockChange, onStockDataChange 
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    searchStocks(value);
+  };
+
+  const searchStocks = (query: string) => {
+    if (!query || query.length < 1) {
+      setSearchResults([]);
+      return;
+    }
+    
+    // Search through popular stocks for matches
+    const matches = allPopularStocks.filter(symbol => 
+      symbol.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    // Add some common stock suggestions based on query
+    const suggestions = [
+      { symbol: 'AAPL', name: 'Apple Inc.' },
+      { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+      { symbol: 'MSFT', name: 'Microsoft Corporation' },
+      { symbol: 'TSLA', name: 'Tesla, Inc.' },
+      { symbol: 'NVDA', name: 'NVIDIA Corporation' },
+      { symbol: 'AMZN', name: 'Amazon.com, Inc.' },
+      { symbol: 'META', name: 'Meta Platforms, Inc.' },
+      { symbol: 'NFLX', name: 'Netflix, Inc.' },
+      { symbol: 'JPM', name: 'JPMorgan Chase & Co.' },
+      { symbol: 'BAC', name: 'Bank of America Corporation' },
+      { symbol: 'JNJ', name: 'Johnson & Johnson' },
+      { symbol: 'UNH', name: 'UnitedHealth Group Incorporated' },
+      { symbol: 'KO', name: 'The Coca-Cola Company' },
+      { symbol: 'PEP', name: 'PepsiCo, Inc.' },
+      { symbol: 'WMT', name: 'Walmart Inc.' },
+      { symbol: 'HD', name: 'The Home Depot, Inc.' },
+      { symbol: 'XOM', name: 'Exxon Mobil Corporation' },
+      { symbol: 'CVX', name: 'Chevron Corporation' },
+      { symbol: 'BA', name: 'The Boeing Company' },
+      { symbol: 'CAT', name: 'Caterpillar Inc.' }
+    ].filter(stock => 
+      stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
+      stock.name.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, 5);
+    
+    setSearchResults(suggestions);
+  };
+
   const handleQuickSelect = (symbol: string) => {
     setSearchQuery(symbol);
     fetchStockData(symbol);
@@ -108,37 +165,75 @@ export const StockSelector = ({ selectedStock, onStockChange, onStockDataChange 
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Search Input */}
-        <div className="flex gap-2">
-          <Input
-            placeholder="Enter stock symbol (e.g., AAPL, TSLA)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="flex-1"
-          />
-          <Button 
-            onClick={handleSearch} 
-            disabled={loading || !searchQuery.trim()}
-            size="icon"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-          </Button>
+        <div className="relative">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Search stocks by symbol or company name..."
+              value={searchQuery}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleSearch} 
+              disabled={loading || !searchQuery.trim()}
+              size="icon"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            </Button>
+          </div>
+          
+          {/* Search Results Dropdown */}
+          {searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+              {searchResults.map((result) => (
+                <button
+                  key={result.symbol}
+                  onClick={() => { handleQuickSelect(result.symbol); setSearchResults([]); }}
+                  className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2"
+                >
+                  <div>
+                    <div className="font-medium">{result.symbol}</div>
+                    <div className="text-sm text-muted-foreground">{result.name}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Quick Select Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <span className="text-xs text-muted-foreground self-center">Popular:</span>
-          {popularStocks.map((symbol) => (
-            <Button
-              key={symbol}
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickSelect(symbol)}
-              className="h-7 text-xs"
-            >
-              {symbol}
-            </Button>
-          ))}
+        {/* Category Selector */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Categories:</span>
+            {Object.keys(stockCategories).map((category) => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className="h-6 text-xs"
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Category Stocks */}
+          <div className="flex flex-wrap gap-2">
+            <span className="text-xs text-muted-foreground self-center">{selectedCategory}:</span>
+            {stockCategories[selectedCategory as keyof typeof stockCategories].map((symbol) => (
+              <Button
+                key={symbol}
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickSelect(symbol)}
+                className="h-7 text-xs"
+              >
+                {symbol}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Error Message */}
