@@ -23,15 +23,26 @@ interface CryptoData {
   image?: string;
 }
 
+interface TrendingCrypto {
+  id: string;
+  name: string;
+  symbol: string;
+  market_cap_rank: number;
+  thumb: string;
+  price_btc: number;
+}
+
 export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataChange }: CryptoSelectorProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [cryptoData, setCryptoData] = useState<CryptoData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchResults, setSearchResults] = useState<CryptoData[]>([]);
+  const [trendingCryptos, setTrendingCryptos] = useState<TrendingCrypto[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
 
-  // Popular cryptocurrencies for quick selection
-  const popularCryptos = ['bitcoin', 'ethereum', 'binancecoin', 'solana', 'cardano', 'avalanche-2', 'polkadot', 'chainlink'];
+  // Updated popular cryptocurrencies including trending ones
+  const popularCryptos = ['bitcoin', 'ethereum', 'solana', 'sui', 'aptos', 'avalanche-2', 'cardano', 'polygon'];
 
   const fetchCryptoData = async (cryptoId: string) => {
     if (!cryptoId) return;
@@ -122,13 +133,36 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
     searchCryptos(value);
   };
 
-  // Load default crypto on mount
+  const fetchTrendingCryptos = async () => {
+    setTrendingLoading(true);
+    try {
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://api.coingecko.com/api/v3/search/trending')}`);
+      const proxyResponse = await response.json();
+      const data = JSON.parse(proxyResponse.contents);
+      
+      setTrendingCryptos(data.coins.slice(0, 6).map((coin: any) => ({
+        id: coin.item.id,
+        name: coin.item.name,
+        symbol: coin.item.symbol,
+        market_cap_rank: coin.item.market_cap_rank,
+        thumb: coin.item.thumb,
+        price_btc: coin.item.price_btc
+      })));
+    } catch (err) {
+      console.error('Failed to fetch trending cryptos:', err);
+    } finally {
+      setTrendingLoading(false);
+    }
+  };
+
+  // Load default crypto and trending on mount
   useEffect(() => {
     if (selectedCrypto && !cryptoData) {
       fetchCryptoData(selectedCrypto);
     } else if (!selectedCrypto) {
       fetchCryptoData('bitcoin'); // Default to Bitcoin
     }
+    fetchTrendingCryptos();
   }, [selectedCrypto]);
 
   return (
@@ -191,9 +225,47 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
             >
               {cryptoId === 'binancecoin' ? 'BNB' : 
                cryptoId === 'avalanche-2' ? 'AVAX' : 
+               cryptoId === 'sui' ? 'SUI' :
+               cryptoId === 'aptos' ? 'APT' :
                cryptoId.replace('-', ' ')}
             </Button>
           ))}
+        </div>
+
+        {/* Trending Cryptocurrencies */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">🔥 Trending Now</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={fetchTrendingCryptos}
+              disabled={trendingLoading}
+              className="h-6 text-xs"
+            >
+              {trendingLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
+            </Button>
+          </div>
+          
+          {trendingCryptos.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {trendingCryptos.map((crypto) => (
+                <Button
+                  key={crypto.id}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleQuickSelect(crypto.id)}
+                  className="h-auto p-2 flex items-center gap-2 justify-start hover:bg-gradient-primary/10"
+                >
+                  <img src={crypto.thumb} alt={crypto.name} className="w-5 h-5 rounded-full" />
+                  <div className="text-left">
+                    <div className="text-xs font-medium">{crypto.symbol}</div>
+                    <div className="text-xs text-muted-foreground truncate max-w-16">#{crypto.market_cap_rank}</div>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Error Message */}
