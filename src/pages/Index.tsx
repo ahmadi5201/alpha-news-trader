@@ -40,7 +40,7 @@ const Index = () => {
       
       toast({
         title: "Prediction Complete",
-        description: `${modelConfig.type} model analysis finished for ${activeTab === 'stocks' ? selectedStock : selectedCrypto.toUpperCase()}`,
+        description: `${modelConfig.type} model analysis finished for ${activeTab === 'stocks' ? selectedStock : selectedCrypto}`,
       });
       
       // Here you would typically call your prediction API
@@ -136,13 +136,14 @@ const Index = () => {
 
               <TabsContent value="predictions" className="space-y-6">
                 <PredictionChart 
-                  selectedStock={selectedStock}
+                  selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
+                  assetType={activeTab}
                   modelType={modelConfig.type}
                 />
               </TabsContent>
 
               <TabsContent value="news" className="space-y-6">
-                <NewsAnalysis selectedStock={selectedStock} />
+                <NewsAnalysis selectedStock={activeTab === 'stocks' ? selectedStock : selectedCrypto} />
               </TabsContent>
 
               <TabsContent value="portfolio" className="space-y-6">

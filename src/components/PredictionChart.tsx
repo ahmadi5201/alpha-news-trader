@@ -4,11 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, BarChart3, Activity, Clock } from 'lucide-react';
 
 interface PredictionChartProps {
-  selectedStock: string;
+  selectedAsset: string;
+  assetType: string;
   modelType: string;
 }
 
-export const PredictionChart = ({ selectedStock, modelType }: PredictionChartProps) => {
+export const PredictionChart = ({ selectedAsset, assetType, modelType }: PredictionChartProps) => {
   // Generate realistic prediction data with actual dates
   const today = new Date();
   const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -169,7 +170,7 @@ export const PredictionChart = ({ selectedStock, modelType }: PredictionChartPro
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5" />
-              <span>{selectedStock} Price Predictions - {modelType}</span>
+              <span>{selectedAsset.toUpperCase()} Price Predictions - {modelType}</span>
             </div>
             <Badge variant="outline">Live</Badge>
           </CardTitle>
