@@ -26,10 +26,12 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
       const futureTime = new Date(today);
       futureTime.setHours(currentHour + i + 1);
       
-      // Generate price with hourly volatility
-      const volatility = (Math.random() - 0.5) * 0.005; // ±0.5% hourly volatility
+      // Generate price with more volatility for better signals
+      const volatility = (Math.random() - 0.5) * 0.02; // ±1% hourly volatility
       const trendFactor = 1 + (i * 0.0002); // Slight trend
-      const price = basePrice * trendFactor * (1 + volatility);
+      // Add some market cycles for more realistic signals
+      const cycleFactor = Math.sin(i * 0.3) * 0.01;
+      const price = basePrice * trendFactor * (1 + volatility + cycleFactor);
       
       predictions.push({
         date: formatDate(futureTime),
@@ -51,10 +53,12 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
       const futureDate = new Date(today);
       futureDate.setDate(today.getDate() + i);
       
-      // Generate price with some volatility
-      const volatility = (Math.random() - 0.5) * 0.02; // ±1% daily volatility
+      // Generate price with more volatility for better signals
+      const volatility = (Math.random() - 0.5) * 0.04; // ±2% daily volatility
       const trendFactor = 1 + (i * 0.001); // Slight upward trend
-      const price = basePrice * trendFactor * (1 + volatility);
+      // Add market cycles for more realistic price movements
+      const cycleFactor = Math.sin(i * 0.2) * 0.02;
+      const price = basePrice * trendFactor * (1 + volatility + cycleFactor);
       
       predictions.push({
         date: formatDate(futureDate),
@@ -83,9 +87,9 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
         const priceChange = ((next.price - current.price) / current.price) * 100;
         
         // Buy signal: quick dip (good for scalping)
-        if (priceChange < -0.8 && i < hourlyPredictions.length - 3) {
+        if (priceChange < -0.4 && i < hourlyPredictions.length - 3) {
           const futurePrice = hourlyPredictions[i + 2]?.price;
-          if (futurePrice && futurePrice > current.price) {
+          if (futurePrice && futurePrice > current.price * 0.999) { // Even small recovery counts
             signals.push({
               date: current.fullDate,
               dateStr: `${current.date} ${current.time}`,
@@ -98,7 +102,7 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
         }
         
         // Sell signal: quick gain (good for taking profits)
-        if (priceChange > 1.2 && current.confidence > 0.7) {
+        if (priceChange > 0.6 && current.confidence > 0.6) {
           signals.push({
             date: current.fullDate,
             dateStr: `${current.date} ${current.time}`,
@@ -128,9 +132,9 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
         const priceChange = ((next.price - current.price) / current.price) * 100;
         
         // Buy signal: significant dip followed by recovery
-        if (priceChange < -2 && i < predictions.length - 5) {
+        if (priceChange < -1.2 && i < predictions.length - 5) {
           const futurePrice = predictions[i + 3]?.price;
-          if (futurePrice && futurePrice > current.price) {
+          if (futurePrice && futurePrice > current.price * 0.998) { // Even small recovery counts
             signals.push({
               date: current.fullDate,
               dateStr: current.date,
@@ -143,7 +147,7 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
         }
         
         // Sell signal: significant gain
-        if (priceChange > 3 && current.confidence > 0.7) {
+        if (priceChange > 1.5 && current.confidence > 0.6) {
           signals.push({
             date: current.fullDate,
             dateStr: current.date,
