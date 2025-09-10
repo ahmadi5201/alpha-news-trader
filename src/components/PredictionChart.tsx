@@ -14,6 +14,8 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
   // State for predictions to ensure they regenerate when asset changes
   const [predictions, setPredictions] = useState<any[]>([]);
   const [hourlyPredictions, setHourlyPredictions] = useState<any[]>([]);
+  const [buySellSignals, setBuySellSignals] = useState<any[]>([]);
+  const [hourlyBuySellSignals, setHourlyBuySellSignals] = useState<any[]>([]);
   const [generationSeed, setGenerationSeed] = useState(Math.random());
   
   // Generate realistic prediction data with actual dates
@@ -118,24 +120,30 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
     const newHourlyPredictions = generateHourlyPredictions();
     setPredictions(newPredictions);
     setHourlyPredictions(newHourlyPredictions);
+    
+    // Generate buy/sell signals with the new predictions
+    const newBuySellSignals = getBuySellSignalsFromPredictions(newPredictions);
+    const newHourlyBuySellSignals = getHourlyBuySellSignalsFromPredictions(newHourlyPredictions);
+    setBuySellSignals(newBuySellSignals);
+    setHourlyBuySellSignals(newHourlyBuySellSignals);
   }, [selectedAsset, assetType, modelType]);
   
   // Generate hourly buy/sell signals
-  const getHourlyBuySellSignals = () => {
+  const getHourlyBuySellSignalsFromPredictions = (predictions: any[]) => {
     const signals = [];
-    const currentPrice = hourlyPredictions[0]?.price || 175;
+    const currentPrice = predictions[0]?.price || 175;
     
     // Find significant price movements for intraday signals
-    for (let i = 0; i < hourlyPredictions.length - 1; i++) {
-      const current = hourlyPredictions[i];
-      const next = hourlyPredictions[i + 1];
+    for (let i = 0; i < predictions.length - 1; i++) {
+      const current = predictions[i];
+      const next = predictions[i + 1];
       
       if (next && current) {
         const priceChange = ((next.price - current.price) / current.price) * 100;
         
         // Buy signal: quick dip (good for scalping)
-        if (priceChange < -0.4 && i < hourlyPredictions.length - 3) {
-          const futurePrice = hourlyPredictions[i + 2]?.price;
+        if (priceChange < -0.4 && i < predictions.length - 3) {
+          const futurePrice = predictions[i + 2]?.price;
           if (futurePrice && futurePrice > current.price * 0.999) { // Even small recovery counts
             signals.push({
               date: current.fullDate,
@@ -166,7 +174,7 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
   };
   
   // Determine buy/sell signals based on price trends
-  const getBuySellSignals = () => {
+  const getBuySellSignalsFromPredictions = (predictions: any[]) => {
     const signals = [];
     const currentPrice = predictions[0]?.price || 175;
     
@@ -209,9 +217,6 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
     
     return signals.slice(0, 3); // Limit to 3 signals
   };
-
-  const buySellSignals = getBuySellSignals();
-  const hourlyBuySellSignals = getHourlyBuySellSignals();
 
   return (
     <div className="space-y-6">
