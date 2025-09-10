@@ -127,6 +127,7 @@ const Index = () => {
 
               <TabsContent value="analysis" className="space-y-6">
                 <TradingDashboard 
+                  key={`${activeTab}-${activeTab === 'stocks' ? selectedStock : selectedCrypto}`}
                   selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
                   assetData={activeTab === 'stocks' ? stockData : cryptoData}
                   assetType={activeTab}
@@ -136,6 +137,7 @@ const Index = () => {
 
               <TabsContent value="predictions" className="space-y-6">
                 <PredictionChart 
+                  key={`${activeTab}-${activeTab === 'stocks' ? selectedStock : selectedCrypto}`}
                   selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
                   assetType={activeTab}
                   modelType={modelConfig.type}
@@ -143,11 +145,17 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="news" className="space-y-6">
-                <NewsAnalysis selectedStock={activeTab === 'stocks' ? selectedStock : selectedCrypto} />
+                <NewsAnalysis 
+                  key={`${activeTab}-${activeTab === 'stocks' ? selectedStock : selectedCrypto}`}
+                  selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto} 
+                  assetType={activeTab}
+                />
               </TabsContent>
 
               <TabsContent value="portfolio" className="space-y-6">
-                <PortfolioOverview />
+                <PortfolioOverview 
+                  key={`portfolio-${activeTab}-${activeTab === 'stocks' ? selectedStock : selectedCrypto}`}
+                />
               </TabsContent>
             </Tabs>
           </div>

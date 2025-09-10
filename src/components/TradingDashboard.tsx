@@ -31,12 +31,33 @@ interface TradingDashboardProps {
 }
 
 export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelConfig }: TradingDashboardProps) => {
-  // Handle both stock and crypto data
+  // Handle both stock and crypto data with proper fallbacks
   const isStock = assetType === 'stocks';
-  const currentPrice = assetData?.price || (isStock ? 175.43 : 50000);
+  
+  // Get current price with better fallbacks
+  const getCurrentPrice = () => {
+    if (assetData?.price) return assetData.price;
+    if (isStock) {
+      // Stock-specific fallbacks based on common symbols
+      const stockPrices: Record<string, number> = {
+        'AAPL': 175.43, 'GOOGL': 125.30, 'MSFT': 338.50, 'TSLA': 248.42,
+        'AMZN': 143.61, 'META': 456.78, 'NFLX': 484.30, 'NVDA': 875.30
+      };
+      return stockPrices[selectedAsset] || 175.43;
+    } else {
+      // Crypto-specific fallbacks based on common cryptos
+      const cryptoPrices: Record<string, number> = {
+        'bitcoin': 67500, 'ethereum': 3420, 'solana': 142, 'sui': 1.85,
+        'aptos': 9.45, 'avalanche-2': 35.20, 'cardano': 0.62, 'polygon': 0.89
+      };
+      return cryptoPrices[selectedAsset] || 50000;
+    }
+  };
+  
+  const currentPrice = getCurrentPrice();
   const currentChange = isStock 
-    ? (assetData as StockData)?.changePercent || 1.33
-    : (assetData as CryptoData)?.changePercent24h || 2.5;
+    ? (assetData as StockData)?.changePercent || (Math.random() - 0.5) * 4
+    : (assetData as CryptoData)?.changePercent24h || (Math.random() - 0.5) * 6;
   
   const analysisData = {
     currentPrice: currentPrice,
@@ -59,7 +80,9 @@ export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelCon
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Current Price</p>
-                <p className="text-2xl font-bold">${analysisData.currentPrice}</p>
+                <p className="text-2xl font-bold">
+                  ${currentPrice.toFixed(currentPrice >= 100 ? 0 : currentPrice >= 1 ? 2 : 4)}
+                </p>
               </div>
               <Activity className="w-8 h-8 text-primary" />
             </div>
@@ -71,9 +94,11 @@ export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelCon
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Predicted Price</p>
-                <p className="text-2xl font-bold">${analysisData.predictedPrice}</p>
+                <p className="text-2xl font-bold">
+                  ${analysisData.predictedPrice.toFixed(currentPrice >= 100 ? 0 : currentPrice >= 1 ? 2 : 4)}
+                </p>
                 <p className={`text-xs ${priceDiff >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {priceDiff >= 0 ? '+' : ''}${priceDiff.toFixed(2)} ({priceChangePercent.toFixed(1)}%)
+                  {priceDiff >= 0 ? '+' : ''}${priceDiff.toFixed(currentPrice >= 1 ? 2 : 4)} ({priceChangePercent.toFixed(1)}%)
                 </p>
               </div>
               <Target className="w-8 h-8 text-success" />
@@ -181,7 +206,9 @@ export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelCon
               ].map((prediction) => (
                 <div key={prediction.period} className="p-3 rounded-lg bg-gradient-primary border border-primary/20">
                   <div className="text-xs text-muted-foreground mb-1">{prediction.period}</div>
-                  <div className="font-bold">${(currentPrice * prediction.multiplier).toFixed(2)}</div>
+                <div className="font-bold">
+                  ${(currentPrice * prediction.multiplier).toFixed(currentPrice >= 100 ? 0 : currentPrice >= 1 ? 2 : 4)}
+                </div>
                   <div className="text-xs">
                     <Progress value={prediction.confidence} className="w-full h-1 mt-1" />
                     <span className="text-muted-foreground">{prediction.confidence}% confidence</span>

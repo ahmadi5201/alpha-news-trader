@@ -15,10 +15,28 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
   const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   
+  // Get appropriate base price for asset
+  const getBasePrice = () => {
+    const isStock = assetType === 'stocks';
+    if (isStock) {
+      const stockPrices: Record<string, number> = {
+        'AAPL': 175, 'GOOGL': 125, 'MSFT': 338, 'TSLA': 248,
+        'AMZN': 143, 'META': 456, 'NFLX': 484, 'NVDA': 875
+      };
+      return stockPrices[selectedAsset] || 175;
+    } else {
+      const cryptoPrices: Record<string, number> = {
+        'bitcoin': 67500, 'ethereum': 3420, 'solana': 142, 'sui': 1.85,
+        'aptos': 9.45, 'avalanche-2': 35.20, 'cardano': 0.62, 'polygon': 0.89
+      };
+      return cryptoPrices[selectedAsset] || 50000;
+    }
+  };
+  
   // Generate hourly predictions for today and next 2 days
   const generateHourlyPredictions = () => {
     const predictions = [];
-    const basePrice = 175 + Math.random() * 50;
+    const basePrice = getBasePrice();
     const currentHour = new Date().getHours();
     
     // Generate 48 hours of predictions (today + next 2 days)
@@ -47,7 +65,7 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
   // Generate future dates for predictions
   const generatePredictions = () => {
     const predictions = [];
-    const basePrice = 175 + Math.random() * 50; // Random base price
+    const basePrice = getBasePrice(); // Use the same function for consistency
     
     for (let i = 1; i <= 30; i++) {
       const futureDate = new Date(today);

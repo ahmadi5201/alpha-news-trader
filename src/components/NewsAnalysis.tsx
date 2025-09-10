@@ -4,57 +4,114 @@ import { Button } from "@/components/ui/button";
 import { Newspaper, TrendingUp, TrendingDown, Clock, ExternalLink } from 'lucide-react';
 
 interface NewsAnalysisProps {
-  selectedStock: string;
+  selectedAsset: string;
+  assetType: string;
 }
 
-export const NewsAnalysis = ({ selectedStock }: NewsAnalysisProps) => {
-  // Mock news data with sentiment analysis
-  const newsData = [
-    {
-      id: 1,
-      title: "Apple Reports Strong Q4 Earnings, Beats Expectations",
-      summary: "Apple Inc. reported quarterly earnings that exceeded analyst expectations, driven by strong iPhone and services revenue.",
-      sentiment: "positive",
-      sentimentScore: 0.85,
-      source: "Reuters",
-      publishedAt: "2 hours ago",
-      impact: "high",
-      url: "#"
-    },
-    {
-      id: 2,
-      title: "Tech Stocks Rally as Market Conditions Improve",
-      summary: "Major technology stocks including Apple saw significant gains as investor confidence returns to the sector.",
-      sentiment: "positive",
-      sentimentScore: 0.72,
-      source: "Bloomberg",
-      publishedAt: "4 hours ago",
-      impact: "medium",
-      url: "#"
-    },
-    {
-      id: 3,
-      title: "Supply Chain Concerns Continue to Affect Manufacturing",
-      summary: "Ongoing supply chain disruptions may impact production schedules for major tech companies in the coming quarter.",
-      sentiment: "negative",
-      sentimentScore: -0.45,
-      source: "Financial Times",
-      publishedAt: "6 hours ago",
-      impact: "medium",
-      url: "#"
-    },
-    {
-      id: 4,
-      title: "New Product Launch Expected to Drive Growth",
-      summary: "Industry analysts predict that upcoming product launches will significantly boost revenue in the next quarter.",
-      sentiment: "positive",
-      sentimentScore: 0.68,
-      source: "WSJ",
-      publishedAt: "8 hours ago",
-      impact: "high",
-      url: "#"
+export const NewsAnalysis = ({ selectedAsset, assetType }: NewsAnalysisProps) => {
+  // Generate dynamic news based on asset type
+  const generateNewsData = () => {
+    const isStock = assetType === 'stocks';
+    const assetName = selectedAsset.toUpperCase();
+    
+    if (isStock) {
+      return [
+        {
+          id: 1,
+          title: `${assetName} Reports Strong Q4 Earnings, Beats Expectations`,
+          summary: `${assetName} reported quarterly earnings that exceeded analyst expectations, driven by strong revenue growth.`,
+          sentiment: "positive",
+          sentimentScore: 0.85,
+          source: "Reuters",
+          publishedAt: "2 hours ago",
+          impact: "high",
+          url: "#"
+        },
+        {
+          id: 2,
+          title: "Tech Stocks Rally as Market Conditions Improve",
+          summary: `Major technology stocks including ${assetName} saw significant gains as investor confidence returns to the sector.`,
+          sentiment: "positive",
+          sentimentScore: 0.72,
+          source: "Bloomberg",
+          publishedAt: "4 hours ago",
+          impact: "medium",
+          url: "#"
+        },
+        {
+          id: 3,
+          title: "Supply Chain Concerns Continue to Affect Manufacturing",
+          summary: "Ongoing supply chain disruptions may impact production schedules for major companies in the coming quarter.",
+          sentiment: "negative",
+          sentimentScore: -0.45,
+          source: "Financial Times",
+          publishedAt: "6 hours ago",
+          impact: "medium",
+          url: "#"
+        },
+        {
+          id: 4,
+          title: "New Product Launch Expected to Drive Growth",
+          summary: `Industry analysts predict that ${assetName}'s upcoming product launches will significantly boost revenue.`,
+          sentiment: "positive",
+          sentimentScore: 0.68,
+          source: "WSJ",
+          publishedAt: "8 hours ago",
+          impact: "high",
+          url: "#"
+        }
+      ];
+    } else {
+      return [
+        {
+          id: 1,
+          title: `${assetName} Surges on Institutional Adoption News`,
+          summary: `${assetName} has gained significant momentum following announcements of major institutional adoption and integration.`,
+          sentiment: "positive",
+          sentimentScore: 0.88,
+          source: "CoinDesk",
+          publishedAt: "1 hour ago",
+          impact: "high",
+          url: "#"
+        },
+        {
+          id: 2,
+          title: "Crypto Market Shows Strong Recovery Signs",
+          summary: `${assetName} and other major cryptocurrencies are showing bullish momentum as market sentiment improves.`,
+          sentiment: "positive",
+          sentimentScore: 0.76,
+          source: "CryptoNews",
+          publishedAt: "3 hours ago",
+          impact: "medium",
+          url: "#"
+        },
+        {
+          id: 3,
+          title: "Regulatory Clarity Brings Optimism to Crypto Space",
+          summary: "Recent regulatory developments provide clearer guidelines for cryptocurrency operations and trading.",
+          sentiment: "positive",
+          sentimentScore: 0.65,
+          source: "Cointelegraph",
+          publishedAt: "5 hours ago",
+          impact: "high",
+          url: "#"
+        },
+        {
+          id: 4,
+          title: `${assetName} Network Upgrades Show Technical Progress`,
+          summary: `Latest network improvements and upgrades demonstrate ${assetName}'s commitment to scalability and efficiency.`,
+          sentiment: "positive",
+          sentimentScore: 0.71,
+          source: "The Block",
+          publishedAt: "7 hours ago",
+          impact: "medium",
+          url: "#"
+        }
+      ];
     }
-  ];
+  };
+
+  const newsData = generateNewsData();
 
   const overallSentiment = newsData.reduce((acc, news) => acc + news.sentimentScore, 0) / newsData.length;
   const positiveNews = newsData.filter(news => news.sentiment === 'positive').length;
@@ -149,7 +206,7 @@ export const NewsAnalysis = ({ selectedStock }: NewsAnalysisProps) => {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Newspaper className="w-5 h-5" />
-            News Analysis for {selectedStock}
+            News Analysis for {selectedAsset.toUpperCase()}
           </CardTitle>
           <Button variant="outline" size="sm">
             Refresh
