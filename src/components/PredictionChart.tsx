@@ -8,9 +8,10 @@ interface PredictionChartProps {
   selectedAsset: string;
   assetType: string;
   modelType: string;
+  currentPrice?: number;
 }
 
-export const PredictionChart = ({ selectedAsset, assetType, modelType }: PredictionChartProps) => {
+export const PredictionChart = ({ selectedAsset, assetType, modelType, currentPrice }: PredictionChartProps) => {
   // State for predictions to ensure they regenerate when asset changes
   const [predictions, setPredictions] = useState<any[]>([]);
   const [hourlyPredictions, setHourlyPredictions] = useState<any[]>([]);
@@ -35,6 +36,10 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
   
   // Get appropriate base price for asset
   const getBasePrice = () => {
+    // Prefer live price from parent when available
+    if (typeof currentPrice === 'number' && currentPrice > 0) {
+      return currentPrice;
+    }
     const isStock = assetType === 'stocks';
     if (isStock) {
       const stockPrices: Record<string, number> = {
@@ -136,7 +141,7 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
     const newHourlyBuySellSignals = getHourlyBuySellSignalsFromPredictions(newHourlyPredictions);
     setBuySellSignals(newBuySellSignals);
     setHourlyBuySellSignals(newHourlyBuySellSignals);
-  }, [selectedAsset, assetType, modelType]);
+  }, [selectedAsset, assetType, modelType, currentPrice]);
   
   // Generate hourly buy/sell signals
   const getHourlyBuySellSignalsFromPredictions = (predictions: any[]) => {

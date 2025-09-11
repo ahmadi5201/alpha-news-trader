@@ -141,6 +141,7 @@ const Index = () => {
                   selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
                   assetType={activeTab}
                   modelType={modelConfig.type}
+                  currentPrice={activeTab === 'stocks' ? stockData?.price : cryptoData?.price}
                 />
               </TabsContent>
 
