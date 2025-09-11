@@ -228,6 +228,21 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
     return signals.slice(0, 3); // Limit to 3 signals
   };
 
+  // Derived metrics for dynamic UI
+  const firstPrice = predictions[0]?.price ?? getBasePrice();
+  const lastPrice = predictions[predictions.length - 1]?.price ?? firstPrice;
+  const priceTarget = lastPrice;
+  const changePct = ((priceTarget - firstPrice) / firstPrice) * 100;
+  const trendUp = changePct >= 0;
+  const avgConfidence = predictions.length
+    ? predictions.reduce((sum, p) => sum + (p.confidence ?? 0), 0) / predictions.length
+    : 0.85;
+
+  const formatMoney = (val: number) => {
+    const decimals = val >= 100 ? 0 : val >= 1 ? 2 : 4;
+    return `$${val.toFixed(decimals)}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Chart Header */}
@@ -298,7 +313,7 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
               Historical Data
             </div>
             <div className="absolute top-4 right-4 text-xs text-success">
-              Predictions (90 days)
+              Predictions (30 days)
             </div>
           </div>
           
@@ -325,10 +340,10 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
         <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <TrendingUp className="w-8 h-8 text-success" />
+              <TrendingUp className={`w-8 h-8 ${trendUp ? 'text-success' : 'text-destructive'}`} />
               <div>
                 <p className="text-sm text-muted-foreground">Trend Direction</p>
-                <p className="font-bold text-success">Bullish</p>
+                <p className={`font-bold ${trendUp ? 'text-success' : 'text-destructive'}`}>{trendUp ? 'Bullish' : 'Bearish'}</p>
                 <p className="text-xs text-muted-foreground">Next 30 days</p>
               </div>
             </div>
@@ -341,8 +356,8 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
               <Activity className="w-8 h-8 text-warning" />
               <div>
                 <p className="text-sm text-muted-foreground">Price Target</p>
-                <p className="font-bold">$187.90</p>
-                <p className="text-xs text-success">+7.1% upside</p>
+                <p className="font-bold">{formatMoney(priceTarget)}</p>
+                <p className={`text-xs ${trendUp ? 'text-success' : 'text-destructive'}`}>{`${trendUp ? '+' : ''}${changePct.toFixed(1)}% ${trendUp ? 'upside' : 'downside'}`}</p>
               </div>
             </div>
           </CardContent>
@@ -354,8 +369,8 @@ export const PredictionChart = ({ selectedAsset, assetType, modelType }: Predict
               <BarChart3 className="w-8 h-8 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">Model Accuracy</p>
-                <p className="font-bold">84.2%</p>
-                <p className="text-xs text-muted-foreground">Last 100 predictions</p>
+                <p className="font-bold">{(avgConfidence * 100).toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground">Based on confidence over 30 days</p>
               </div>
             </div>
           </CardContent>
