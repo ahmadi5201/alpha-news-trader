@@ -7,6 +7,7 @@ import { NewsAnalysis } from '@/components/NewsAnalysis';
 import { PortfolioOverview } from '@/components/PortfolioOverview';
 import { PredictionChart } from '@/components/PredictionChart';
 import { StopLossConfig } from '@/components/StopLossConfig';
+import { TechnicalAnalysis } from '@/components/TechnicalAnalysis';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
@@ -118,9 +119,10 @@ const Index = () => {
           {/* Main Dashboard */}
           <div className="lg:col-span-3">
             <Tabs defaultValue="analysis" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="analysis">Analysis</TabsTrigger>
                 <TabsTrigger value="predictions">Predictions</TabsTrigger>
+                <TabsTrigger value="technical">Technical</TabsTrigger>
                 <TabsTrigger value="news">News</TabsTrigger>
                 <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
               </TabsList>
@@ -141,6 +143,15 @@ const Index = () => {
                   selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
                   assetType={activeTab}
                   modelType={modelConfig.type}
+                  currentPrice={activeTab === 'stocks' ? stockData?.price : cryptoData?.price}
+                />
+              </TabsContent>
+
+              <TabsContent value="technical" className="space-y-6">
+                <TechnicalAnalysis 
+                  key={`${activeTab}-${activeTab === 'stocks' ? selectedStock : selectedCrypto}`}
+                  selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
+                  assetType={activeTab}
                   currentPrice={activeTab === 'stocks' ? stockData?.price : cryptoData?.price}
                 />
               </TabsContent>
