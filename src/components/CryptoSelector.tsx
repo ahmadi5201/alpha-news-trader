@@ -57,12 +57,48 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
   const fetchCryptoData = async (cryptoId: string) => {
     if (!cryptoId) return;
     
+    // Normalize common symbols to CoinGecko IDs
+    const symbolToId: Record<string, string> = {
+      btc: 'bitcoin', eth: 'ethereum', bnb: 'binancecoin', ton: 'the-open-network',
+      avax: 'avalanche-2', ada: 'cardano', dot: 'polkadot', sol: 'solana', matic: 'polygon'
+    };
+    const normalizedId = symbolToId[cryptoId.toLowerCase()] || cryptoId.toLowerCase();
+    
     setLoading(true);
     setError('');
     
     try {
-      // Using CoinGecko API with CORS proxy
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/${cryptoId.toLowerCase()}`)}`);
+      // First try the lightweight markets endpoint (more reliable and less rate-limited)
+      try {
+        const mktResp = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${normalizedId}`)}`);
+        if (mktResp.ok) {
+          const proxy = await mktResp.json();
+          const arr = JSON.parse(proxy.contents);
+          if (Array.isArray(arr) && arr.length > 0) {
+            const c = arr[0];
+            const crypto: CryptoData = {
+              id: c.id,
+              symbol: (c.symbol || '').toUpperCase(),
+              name: c.name || 'Unknown',
+              price: c.current_price ?? 0,
+              change24h: c.price_change_24h ?? (c.current_price * (c.price_change_percentage_24h ?? 0) / 100) ?? 0,
+              changePercent24h: c.price_change_percentage_24h ?? 0,
+              volume24h: typeof c.total_volume === 'number' ? c.total_volume.toLocaleString() : 'N/A',
+              marketCap: typeof c.market_cap === 'number' ? (c.market_cap / 1e9).toFixed(1) + 'B' : 'N/A',
+              image: c.image
+            };
+            setCryptoData(crypto);
+            onCryptoChange(c.id);
+            onCryptoDataChange?.(crypto);
+            return; // success via markets endpoint
+          }
+        }
+      } catch (_) {
+        // Ignore and fall through to full /coins endpoint below
+      }
+
+      // Fallback to full /coins endpoint
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/${normalizedId}`)}`);
       
       if (!response.ok) {
         throw new Error('Network error occurred');
@@ -104,10 +140,10 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
       
       // Provide fallback data for common cryptocurrencies
       if (err instanceof Error && err.message.includes('rate limit')) {
-        const fallbackData = getFallbackCryptoData(cryptoId);
+        const fallbackData = getFallbackCryptoData(normalizedId);
         if (fallbackData) {
           setCryptoData(fallbackData);
-          onCryptoChange(cryptoId);
+          onCryptoChange(normalizedId);
           onCryptoDataChange?.(fallbackData);
           setError('Using cached data due to API limitations.');
           return;
@@ -248,6 +284,48 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
     }
     fetchTrendingCryptos();
   }, [selectedCrypto]);
+
+  // Lightweight live price refresher (every 30s) to keep ETH and others accurate
+  useEffect(() => {
+    if (!cryptoData?.id) return;
+    const id = cryptoData.id.toLowerCase();
+
+    const update = async () => {
+      try {
+        const resp = await fetch(
+          `https://api.allorigins.win/get?url=${encodeURIComponent(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`
+          )}`
+        );
+        if (!resp.ok) return;
+        const pr = await resp.json();
+        const simple = JSON.parse(pr.contents);
+        const entry = simple?.[id];
+        if (!entry) return;
+
+        setCryptoData((prev) => {
+          if (!prev) return prev;
+          const newPrice = typeof entry.usd === 'number' ? entry.usd : prev.price;
+          const pct = typeof entry.usd_24h_change === 'number' ? entry.usd_24h_change : prev.changePercent24h;
+          const changeAbs = typeof pct === 'number' && typeof newPrice === 'number' ? (newPrice * pct) / 100 : prev.change24h;
+          const vol = entry.usd_24h_vol;
+          const mkt = entry.usd_market_cap;
+          return {
+            ...prev,
+            price: newPrice,
+            changePercent24h: pct,
+            change24h: changeAbs,
+            volume24h: typeof vol === 'number' ? vol.toLocaleString() : prev.volume24h,
+            marketCap: typeof mkt === 'number' ? (mkt / 1e9).toFixed(1) + 'B' : prev.marketCap,
+          };
+        });
+      } catch {}
+    };
+
+    update();
+    const interval = setInterval(update, 30000);
+    return () => clearInterval(interval);
+  }, [cryptoData?.id]);
 
   return (
     <Card className="bg-card border-border shadow-card">
