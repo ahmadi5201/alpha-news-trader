@@ -54,6 +54,9 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
   const [selectedCryptoCategory, setSelectedCryptoCategory] = useState<string>('Top Coins');
   const allPopularCryptos = Object.values(cryptoCategories).flat();
 
+  // Cache-busting helper to avoid proxy caching stale prices
+  const withCB = (url: string) => url + (url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+
   const fetchCryptoData = async (cryptoId: string) => {
     if (!cryptoId) return;
     
@@ -70,7 +73,7 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
     try {
       // First try the lightweight markets endpoint (more reliable and less rate-limited)
       try {
-        const mktResp = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${normalizedId}`)}`);
+        const mktResp = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(withCB(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${normalizedId}`))}`);
         if (mktResp.ok) {
           const proxy = await mktResp.json();
           const arr = JSON.parse(proxy.contents);
@@ -98,7 +101,7 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
       }
 
       // Fallback to full /coins endpoint
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/${normalizedId}`)}`);
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(withCB(`https://api.coingecko.com/api/v3/coins/${normalizedId}`))}`);
       
       if (!response.ok) {
         throw new Error('Network error occurred');
@@ -294,7 +297,7 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
       try {
         const resp = await fetch(
           `https://api.allorigins.win/get?url=${encodeURIComponent(
-            `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`
+            withCB(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`)
           )}`
         );
         if (!resp.ok) return;
