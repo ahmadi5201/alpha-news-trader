@@ -54,54 +54,131 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
   const [selectedCryptoCategory, setSelectedCryptoCategory] = useState<string>('Top Coins');
   const allPopularCryptos = Object.values(cryptoCategories).flat();
 
+  // API fallback system - tries each API in order until one works
   const fetchCryptoData = async (cryptoId: string) => {
     if (!cryptoId) return;
-    
-    // Normalize common symbols to CoinCap IDs
-    const symbolToId: Record<string, string> = {
-      btc: 'bitcoin', eth: 'ethereum', bnb: 'binance-coin', ton: 'toncoin',
-      avax: 'avalanche', ada: 'cardano', dot: 'polkadot', sol: 'solana', matic: 'polygon'
-    };
-    const normalizedId = symbolToId[cryptoId.toLowerCase()] || cryptoId.toLowerCase();
     
     setLoading(true);
     setError('');
     
-    try {
-      // Use CoinCap API - more reliable free tier without rate limits
-      const response = await fetch(`https://api.coincap.io/v2/assets/${normalizedId}`);
-      
-      if (!response.ok) {
-        throw new Error('Cryptocurrency not found');
+    // Define API providers with their fetch functions
+    const apiProviders = [
+      {
+        name: 'CoinCap',
+        fetch: async (id: string) => {
+          const symbolToId: Record<string, string> = {
+            btc: 'bitcoin', eth: 'ethereum', bnb: 'binance-coin', ton: 'toncoin',
+            avax: 'avalanche', ada: 'cardano', dot: 'polkadot', sol: 'solana', matic: 'polygon'
+          };
+          const normalizedId = symbolToId[id.toLowerCase()] || id.toLowerCase();
+          
+          const response = await fetch(`https://api.coincap.io/v2/assets/${normalizedId}`);
+          if (!response.ok) throw new Error('CoinCap API failed');
+          
+          const result = await response.json();
+          const data = result.data;
+          if (!data || !data.id) throw new Error('Invalid data');
+          
+          return {
+            id: data.id,
+            symbol: (data.symbol || '').toUpperCase(),
+            name: data.name || 'Unknown',
+            price: parseFloat(data.priceUsd) || 0,
+            change24h: parseFloat(data.changePercent24Hr) ? (parseFloat(data.priceUsd) * parseFloat(data.changePercent24Hr) / 100) : 0,
+            changePercent24h: parseFloat(data.changePercent24Hr) || 0,
+            volume24h: data.volumeUsd24Hr ? parseFloat(data.volumeUsd24Hr).toLocaleString(undefined, { maximumFractionDigits: 0 }) : 'N/A',
+            marketCap: data.marketCapUsd ? (parseFloat(data.marketCapUsd) / 1e9).toFixed(1) + 'B' : 'N/A',
+          };
+        }
+      },
+      {
+        name: 'CoinGecko',
+        fetch: async (id: string) => {
+          const symbolToId: Record<string, string> = {
+            btc: 'bitcoin', eth: 'ethereum', bnb: 'binancecoin', ton: 'the-open-network',
+            avax: 'avalanche-2', ada: 'cardano', dot: 'polkadot', sol: 'solana', matic: 'polygon'
+          };
+          const normalizedId = symbolToId[id.toLowerCase()] || id.toLowerCase();
+          
+          const response = await fetch(`https://api.coingecko.com/api/v3/coins/${normalizedId}`);
+          if (!response.ok) throw new Error('CoinGecko API failed');
+          
+          const data = await response.json();
+          if (data.status?.error_code) throw new Error(data.status.error_message);
+          if (!data.id || !data.market_data) throw new Error('Invalid data');
+          
+          return {
+            id: data.id,
+            symbol: (data.symbol || '').toUpperCase(),
+            name: data.name || 'Unknown',
+            price: data.market_data?.current_price?.usd || 0,
+            change24h: data.market_data?.price_change_24h || 0,
+            changePercent24h: data.market_data?.price_change_percentage_24h || 0,
+            volume24h: data.market_data?.total_volume?.usd?.toLocaleString() || 'N/A',
+            marketCap: data.market_data?.market_cap?.usd ? (data.market_data.market_cap.usd / 1e9).toFixed(1) + 'B' : 'N/A',
+            image: data.image?.small
+          };
+        }
+      },
+      {
+        name: 'CoinGecko (Proxy)',
+        fetch: async (id: string) => {
+          const symbolToId: Record<string, string> = {
+            btc: 'bitcoin', eth: 'ethereum', bnb: 'binancecoin', ton: 'the-open-network',
+            avax: 'avalanche-2', ada: 'cardano', dot: 'polkadot', sol: 'solana', matic: 'polygon'
+          };
+          const normalizedId = symbolToId[id.toLowerCase()] || id.toLowerCase();
+          
+          const response = await fetch(
+            `https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${normalizedId}`)}`
+          );
+          if (!response.ok) throw new Error('CoinGecko Proxy failed');
+          
+          const proxy = await response.json();
+          const arr = JSON.parse(proxy.contents);
+          if (!Array.isArray(arr) || arr.length === 0) throw new Error('No data');
+          
+          const c = arr[0];
+          return {
+            id: c.id,
+            symbol: (c.symbol || '').toUpperCase(),
+            name: c.name || 'Unknown',
+            price: c.current_price ?? 0,
+            change24h: c.price_change_24h ?? 0,
+            changePercent24h: c.price_change_percentage_24h ?? 0,
+            volume24h: typeof c.total_volume === 'number' ? c.total_volume.toLocaleString() : 'N/A',
+            marketCap: typeof c.market_cap === 'number' ? (c.market_cap / 1e9).toFixed(1) + 'B' : 'N/A',
+            image: c.image
+          };
+        }
       }
-      
-      const result = await response.json();
-      const data = result.data;
-      
-      if (!data || !data.id) {
-        throw new Error('Invalid cryptocurrency data received');
+    ];
+    
+    // Try each API in sequence until one works
+    let lastError: Error | null = null;
+    for (const provider of apiProviders) {
+      try {
+        console.log(`Trying ${provider.name}...`);
+        const cryptoData = await provider.fetch(cryptoId);
+        
+        // Success! Update state and return
+        setCryptoData(cryptoData);
+        onCryptoChange(cryptoData.id);
+        onCryptoDataChange?.(cryptoData);
+        console.log(`✓ ${provider.name} succeeded`);
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.warn(`✗ ${provider.name} failed:`, err);
+        lastError = err as Error;
+        // Continue to next provider
       }
-      
-      const crypto: CryptoData = {
-        id: data.id,
-        symbol: (data.symbol || '').toUpperCase(),
-        name: data.name || 'Unknown',
-        price: parseFloat(data.priceUsd) || 0,
-        change24h: parseFloat(data.changePercent24Hr) ? (parseFloat(data.priceUsd) * parseFloat(data.changePercent24Hr) / 100) : 0,
-        changePercent24h: parseFloat(data.changePercent24Hr) || 0,
-        volume24h: data.volumeUsd24Hr ? parseFloat(data.volumeUsd24Hr).toLocaleString(undefined, { maximumFractionDigits: 0 }) : 'N/A',
-        marketCap: data.marketCapUsd ? (parseFloat(data.marketCapUsd) / 1e9).toFixed(1) + 'B' : 'N/A',
-      };
-      
-      setCryptoData(crypto);
-      onCryptoChange(data.id);
-      onCryptoDataChange?.(crypto);
-    } catch (err) {
-      console.error('Crypto fetch error:', err);
-      setError('Failed to fetch cryptocurrency data. Please check the symbol and try again.');
-    } finally {
-      setLoading(false);
     }
+    
+    // All APIs failed
+    console.error('All APIs failed. Last error:', lastError);
+    setError('Unable to fetch data from any provider. Please try again later.');
+    setLoading(false);
   };
 
 
@@ -111,20 +188,52 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
       return;
     }
     
-    try {
-      const response = await fetch(`https://api.coincap.io/v2/assets?search=${encodeURIComponent(query)}&limit=5`);
-      const result = await response.json();
-      
-      const results = result.data.map((coin: any) => ({
-        id: coin.id,
-        symbol: coin.symbol.toUpperCase(),
-        name: coin.name,
-      }));
-      
-      setSearchResults(results);
-    } catch (err) {
-      console.error('Search error:', err);
+    // Try multiple search APIs with fallback
+    const searchProviders = [
+      {
+        name: 'CoinCap',
+        search: async () => {
+          const response = await fetch(`https://api.coincap.io/v2/assets?search=${encodeURIComponent(query)}&limit=5`);
+          if (!response.ok) throw new Error('CoinCap search failed');
+          const result = await response.json();
+          return result.data.map((coin: any) => ({
+            id: coin.id,
+            symbol: coin.symbol.toUpperCase(),
+            name: coin.name,
+          }));
+        }
+      },
+      {
+        name: 'CoinGecko',
+        search: async () => {
+          const response = await fetch(
+            `https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`)}`
+          );
+          if (!response.ok) throw new Error('CoinGecko search failed');
+          const proxy = await response.json();
+          const data = JSON.parse(proxy.contents);
+          return data.coins.slice(0, 5).map((coin: any) => ({
+            id: coin.id,
+            symbol: coin.symbol.toUpperCase(),
+            name: coin.name,
+            image: coin.thumb
+          }));
+        }
+      }
+    ];
+    
+    for (const provider of searchProviders) {
+      try {
+        const results = await provider.search();
+        setSearchResults(results);
+        return;
+      } catch (err) {
+        console.warn(`${provider.name} search failed:`, err);
+      }
     }
+    
+    // All search APIs failed
+    console.error('All search APIs failed');
   };
 
   const handleSearch = () => {
@@ -184,33 +293,68 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
     fetchTrendingCryptos();
   }, [selectedCrypto]);
 
-  // Lightweight live price refresher (every 30s) to keep prices accurate
+  // Lightweight live price refresher (every 30s) with API fallback
   useEffect(() => {
     if (!cryptoData?.id) return;
     const id = cryptoData.id.toLowerCase();
 
     const update = async () => {
+      // Try CoinCap first
       try {
         const resp = await fetch(`https://api.coincap.io/v2/assets/${id}`);
-        if (!resp.ok) return;
-        const result = await resp.json();
-        const data = result.data;
-        if (!data) return;
-
-        setCryptoData((prev) => {
-          if (!prev) return prev;
-          const newPrice = parseFloat(data.priceUsd) || prev.price;
-          const pct = parseFloat(data.changePercent24Hr) || prev.changePercent24h;
-          const changeAbs = (newPrice * pct) / 100;
-          return {
-            ...prev,
-            price: newPrice,
-            changePercent24h: pct,
-            change24h: changeAbs,
-            volume24h: data.volumeUsd24Hr ? parseFloat(data.volumeUsd24Hr).toLocaleString(undefined, { maximumFractionDigits: 0 }) : prev.volume24h,
-            marketCap: data.marketCapUsd ? (parseFloat(data.marketCapUsd) / 1e9).toFixed(1) + 'B' : prev.marketCap,
-          };
-        });
+        if (resp.ok) {
+          const result = await resp.json();
+          const data = result.data;
+          if (data) {
+            setCryptoData((prev) => {
+              if (!prev) return prev;
+              const newPrice = parseFloat(data.priceUsd) || prev.price;
+              const pct = parseFloat(data.changePercent24Hr) || prev.changePercent24h;
+              const changeAbs = (newPrice * pct) / 100;
+              return {
+                ...prev,
+                price: newPrice,
+                changePercent24h: pct,
+                change24h: changeAbs,
+                volume24h: data.volumeUsd24Hr ? parseFloat(data.volumeUsd24Hr).toLocaleString(undefined, { maximumFractionDigits: 0 }) : prev.volume24h,
+                marketCap: data.marketCapUsd ? (parseFloat(data.marketCapUsd) / 1e9).toFixed(1) + 'B' : prev.marketCap,
+              };
+            });
+            return;
+          }
+        }
+      } catch {}
+      
+      // Fallback to CoinGecko simple price API
+      try {
+        const symbolToId: Record<string, string> = {
+          'bitcoin': 'bitcoin', 'ethereum': 'ethereum', 'binance-coin': 'binancecoin',
+          'solana': 'solana', 'toncoin': 'the-open-network', 'avalanche': 'avalanche-2'
+        };
+        const geckoId = symbolToId[id] || id;
+        
+        const resp = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`
+        );
+        if (resp.ok) {
+          const simple = await resp.json();
+          const entry = simple?.[geckoId];
+          if (entry) {
+            setCryptoData((prev) => {
+              if (!prev) return prev;
+              const newPrice = entry.usd || prev.price;
+              const pct = entry.usd_24h_change || prev.changePercent24h;
+              return {
+                ...prev,
+                price: newPrice,
+                changePercent24h: pct,
+                change24h: (newPrice * pct) / 100,
+                volume24h: entry.usd_24h_vol ? entry.usd_24h_vol.toLocaleString() : prev.volume24h,
+                marketCap: entry.usd_market_cap ? (entry.usd_market_cap / 1e9).toFixed(1) + 'B' : prev.marketCap,
+              };
+            });
+          }
+        }
       } catch {}
     };
 
