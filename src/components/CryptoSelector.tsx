@@ -9,6 +9,7 @@ interface CryptoSelectorProps {
   selectedCrypto: string;
   onCryptoChange: (crypto: string) => void;
   onCryptoDataChange?: (cryptoData: CryptoData | null) => void;
+  currency?: string;
 }
 
 interface CryptoData {
@@ -32,7 +33,17 @@ interface TrendingCrypto {
   price_btc: number;
 }
 
-export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataChange }: CryptoSelectorProps) => {
+export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataChange, currency = 'usd' }: CryptoSelectorProps) => {
+  
+  const currencySymbols: Record<string, string> = {
+    usd: '$',
+    eur: '€',
+    sek: 'kr'
+  };
+  
+  const getCurrencySymbol = () => {
+    return currencySymbols[currency];
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [cryptoData, setCryptoData] = useState<CryptoData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -79,15 +90,26 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
           const data = result.data;
           if (!data || !data.id) throw new Error('Invalid data');
           
+          // Currency conversion rates
+          const currencyRates: Record<string, number> = {
+            usd: 1,
+            eur: 0.92,
+            sek: 10.50
+          };
+          const rate = currencyRates[currency];
+          
+          const priceUSD = parseFloat(data.priceUsd) || 0;
+          const change24hUSD = parseFloat(data.changePercent24Hr) ? (priceUSD * parseFloat(data.changePercent24Hr) / 100) : 0;
+          
           return {
             id: data.id,
             symbol: (data.symbol || '').toUpperCase(),
             name: data.name || 'Unknown',
-            price: parseFloat(data.priceUsd) || 0,
-            change24h: parseFloat(data.changePercent24Hr) ? (parseFloat(data.priceUsd) * parseFloat(data.changePercent24Hr) / 100) : 0,
+            price: priceUSD * rate,
+            change24h: change24hUSD * rate,
             changePercent24h: parseFloat(data.changePercent24Hr) || 0,
-            volume24h: data.volumeUsd24Hr ? parseFloat(data.volumeUsd24Hr).toLocaleString(undefined, { maximumFractionDigits: 0 }) : 'N/A',
-            marketCap: data.marketCapUsd ? (parseFloat(data.marketCapUsd) / 1e9).toFixed(1) + 'B' : 'N/A',
+            volume24h: data.volumeUsd24Hr ? (parseFloat(data.volumeUsd24Hr) * rate).toLocaleString(undefined, { maximumFractionDigits: 0 }) : 'N/A',
+            marketCap: data.marketCapUsd ? ((parseFloat(data.marketCapUsd) * rate) / 1e9).toFixed(1) + 'B' : 'N/A',
           };
         }
       },
@@ -107,15 +129,16 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
           if (data.status?.error_code) throw new Error(data.status.error_message);
           if (!data.id || !data.market_data) throw new Error('Invalid data');
           
+          const priceKey = currency.toLowerCase();
           return {
             id: data.id,
             symbol: (data.symbol || '').toUpperCase(),
             name: data.name || 'Unknown',
-            price: data.market_data?.current_price?.usd || 0,
-            change24h: data.market_data?.price_change_24h || 0,
+            price: data.market_data?.current_price?.[priceKey] || data.market_data?.current_price?.usd || 0,
+            change24h: data.market_data?.price_change_24h_in_currency?.[priceKey] || data.market_data?.price_change_24h || 0,
             changePercent24h: data.market_data?.price_change_percentage_24h || 0,
-            volume24h: data.market_data?.total_volume?.usd?.toLocaleString() || 'N/A',
-            marketCap: data.market_data?.market_cap?.usd ? (data.market_data.market_cap.usd / 1e9).toFixed(1) + 'B' : 'N/A',
+            volume24h: data.market_data?.total_volume?.[priceKey]?.toLocaleString() || data.market_data?.total_volume?.usd?.toLocaleString() || 'N/A',
+            marketCap: data.market_data?.market_cap?.[priceKey] ? (data.market_data.market_cap[priceKey] / 1e9).toFixed(1) + 'B' : (data.market_data?.market_cap?.usd ? (data.market_data.market_cap.usd / 1e9).toFixed(1) + 'B' : 'N/A'),
             image: data.image?.small
           };
         }
@@ -130,7 +153,7 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
           const normalizedId = symbolToId[id.toLowerCase()] || id.toLowerCase();
           
           const response = await fetch(
-            `https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${normalizedId}`)}`
+            `https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&ids=${normalizedId}`)}`
           );
           if (!response.ok) throw new Error('CoinGecko Proxy failed');
           
@@ -292,6 +315,13 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
     }
     fetchTrendingCryptos();
   }, [selectedCrypto]);
+
+  // Refetch when currency changes
+  useEffect(() => {
+    if (cryptoData) {
+      fetchCryptoData(cryptoData.id);
+    }
+  }, [currency]);
 
   // Lightweight live price refresher (every 30s) with API fallback
   useEffect(() => {
@@ -515,9 +545,9 @@ export const CryptoSelector = ({ selectedCrypto, onCryptoChange, onCryptoDataCha
                 {cryptoData.changePercent24h > 0 ? '+' : ''}{cryptoData.changePercent24h.toFixed(2)}%
               </Badge>
             </div>
-            <div className="text-2xl font-bold mb-1">${cryptoData.price.toLocaleString()}</div>
+            <div className="text-2xl font-bold mb-1">{getCurrencySymbol()}{cryptoData.price.toLocaleString()}</div>
             <div className={`text-sm ${cryptoData.changePercent24h >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {cryptoData.changePercent24h >= 0 ? '+' : ''}${cryptoData.change24h?.toFixed(2)} (24h)
+              {cryptoData.changePercent24h >= 0 ? '+' : ''}{getCurrencySymbol()}{cryptoData.change24h?.toFixed(2)} (24h)
             </div>
           </div>
         )}

@@ -9,6 +9,7 @@ interface StockSelectorProps {
   selectedStock: string;
   onStockChange: (stock: string) => void;
   onStockDataChange?: (stockData: StockData | null) => void;
+  currency?: string;
 }
 
 interface StockData {
@@ -21,7 +22,27 @@ interface StockData {
   marketCap?: string;
 }
 
-export const StockSelector = ({ selectedStock, onStockChange, onStockDataChange }: StockSelectorProps) => {
+export const StockSelector = ({ selectedStock, onStockChange, onStockDataChange, currency = 'usd' }: StockSelectorProps) => {
+  
+  const currencySymbols: Record<string, string> = {
+    usd: '$',
+    eur: '€',
+    sek: 'kr'
+  };
+  
+  const currencyRates: Record<string, number> = {
+    usd: 1,
+    eur: 0.92,
+    sek: 10.50
+  };
+  
+  const convertPrice = (priceUSD: number) => {
+    return priceUSD * currencyRates[currency];
+  };
+  
+  const getCurrencySymbol = () => {
+    return currencySymbols[currency];
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -260,9 +281,9 @@ export const StockSelector = ({ selectedStock, onStockChange, onStockDataChange 
                 {stockData.changePercent > 0 ? '+' : ''}{stockData.changePercent.toFixed(2)}%
               </Badge>
             </div>
-            <div className="text-2xl font-bold mb-1">${stockData.price.toFixed(2)}</div>
+            <div className="text-2xl font-bold mb-1">{getCurrencySymbol()}{convertPrice(stockData.price).toFixed(2)}</div>
             <div className={`text-sm ${stockData.change >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {stockData.change >= 0 ? '+' : ''}${stockData.change.toFixed(2)} Today
+              {stockData.change >= 0 ? '+' : ''}{getCurrencySymbol()}{convertPrice(stockData.change).toFixed(2)} Today
             </div>
           </div>
         )}

@@ -9,6 +9,7 @@ import { PredictionChart } from '@/components/PredictionChart';
 import { StopLossConfig } from '@/components/StopLossConfig';
 import { TechnicalAnalysis } from '@/components/TechnicalAnalysis';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 interface StockData {
@@ -27,6 +28,7 @@ const Index = () => {
   const [cryptoData, setCryptoData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('stocks');
   const [isRunningPrediction, setIsRunningPrediction] = useState(false);
+  const [currency, setCurrency] = useState('usd');
   const [modelConfig, setModelConfig] = useState({
     type: 'ARIMA',
     parameters: { p: 1, d: 1, q: 1 }
@@ -71,6 +73,16 @@ const Index = () => {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger className="w-24 h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="usd">USD</SelectItem>
+                  <SelectItem value="eur">EUR</SelectItem>
+                  <SelectItem value="sek">SEK</SelectItem>
+                </SelectContent>
+              </Select>
               <div className="text-sm text-muted-foreground">
                 Market Status: <span className="text-success">Open</span>
               </div>
@@ -95,6 +107,7 @@ const Index = () => {
                   selectedStock={selectedStock}
                   onStockChange={setSelectedStock}
                   onStockDataChange={setStockData}
+                  currency={currency}
                 />
               </TabsContent>
               
@@ -103,6 +116,7 @@ const Index = () => {
                   selectedCrypto={selectedCrypto}
                   onCryptoChange={setSelectedCrypto}
                   onCryptoDataChange={setCryptoData}
+                  currency={currency}
                 />
               </TabsContent>
             </Tabs>
@@ -129,11 +143,12 @@ const Index = () => {
 
               <TabsContent value="analysis" className="space-y-6">
                 <TradingDashboard 
-                  key={`${activeTab}-${activeTab === 'stocks' ? selectedStock : selectedCrypto}`}
+                  key={`${activeTab}-${activeTab === 'stocks' ? selectedStock : selectedCrypto}-${currency}`}
                   selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
                   assetData={activeTab === 'stocks' ? stockData : cryptoData}
                   assetType={activeTab}
                   modelConfig={modelConfig}
+                  currency={currency}
                 />
               </TabsContent>
 

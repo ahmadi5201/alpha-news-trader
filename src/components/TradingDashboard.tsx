@@ -28,9 +28,31 @@ interface TradingDashboardProps {
     type: string;
     parameters: any;
   };
+  currency?: string;
 }
 
-export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelConfig }: TradingDashboardProps) => {
+export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelConfig, currency = 'usd' }: TradingDashboardProps) => {
+  
+  const currencySymbols: Record<string, string> = {
+    usd: '$',
+    eur: '€',
+    sek: 'kr'
+  };
+  
+  const currencyRates: Record<string, number> = {
+    usd: 1,
+    eur: 0.92,
+    sek: 10.50
+  };
+  
+  const convertPrice = (priceUSD: number) => {
+    return priceUSD * currencyRates[currency];
+  };
+  
+  const getCurrencySymbol = () => {
+    return currencySymbols[currency];
+  };
+  
   // Handle both stock and crypto data with proper fallbacks
   const isStock = assetType === 'stocks';
   
@@ -81,7 +103,7 @@ export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelCon
               <div>
                 <p className="text-sm text-muted-foreground">Current Price</p>
                 <p className="text-2xl font-bold">
-                  ${currentPrice.toFixed(currentPrice >= 100 ? 0 : currentPrice >= 1 ? 2 : 4)}
+                  {getCurrencySymbol()}{convertPrice(currentPrice).toFixed(currentPrice >= 100 ? 0 : currentPrice >= 1 ? 2 : 4)}
                 </p>
               </div>
               <Activity className="w-8 h-8 text-primary" />
@@ -95,10 +117,10 @@ export const TradingDashboard = ({ selectedAsset, assetData, assetType, modelCon
               <div>
                 <p className="text-sm text-muted-foreground">Predicted Price</p>
                 <p className="text-2xl font-bold">
-                  ${analysisData.predictedPrice.toFixed(currentPrice >= 100 ? 0 : currentPrice >= 1 ? 2 : 4)}
+                  {getCurrencySymbol()}{convertPrice(analysisData.predictedPrice).toFixed(currentPrice >= 100 ? 0 : currentPrice >= 1 ? 2 : 4)}
                 </p>
                 <p className={`text-xs ${priceDiff >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {priceDiff >= 0 ? '+' : ''}${priceDiff.toFixed(currentPrice >= 1 ? 2 : 4)} ({priceChangePercent.toFixed(1)}%)
+                  {priceDiff >= 0 ? '+' : ''}{getCurrencySymbol()}{convertPrice(Math.abs(priceDiff)).toFixed(currentPrice >= 1 ? 2 : 4)} ({priceChangePercent.toFixed(1)}%)
                 </p>
               </div>
               <Target className="w-8 h-8 text-success" />
