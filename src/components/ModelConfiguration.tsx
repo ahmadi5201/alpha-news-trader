@@ -20,6 +20,7 @@ export const ModelConfiguration = ({ config, onConfigChange, onRunPrediction, is
   const modelTypes = [
     { value: 'ARMA', label: 'ARMA', description: 'AutoRegressive Moving Average' },
     { value: 'ARIMA', label: 'ARIMA', description: 'AutoRegressive Integrated MA' },
+    { value: 'SARIMA', label: 'SARIMA', description: 'Seasonal ARIMA' },
     { value: 'GARCH', label: 'GARCH', description: 'Generalized ARCH' },
   ];
 
@@ -27,6 +28,7 @@ export const ModelConfiguration = ({ config, onConfigChange, onRunPrediction, is
     const defaultParams = {
       ARMA: { p: 1, q: 1 },
       ARIMA: { p: 1, d: 1, q: 1 },
+      SARIMA: { p: 1, d: 1, q: 1, P: 1, D: 1, Q: 1, s: 12 },
       GARCH: { p: 1, q: 1, o: 1, m: 1 }
     };
     
