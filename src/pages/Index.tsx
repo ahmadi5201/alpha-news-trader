@@ -8,6 +8,7 @@ import { PortfolioOverview } from '@/components/PortfolioOverview';
 import { PredictionChart } from '@/components/PredictionChart';
 import { StopLossConfig } from '@/components/StopLossConfig';
 import { TechnicalAnalysis } from '@/components/TechnicalAnalysis';
+import { MLStrategies } from '@/components/MLStrategies';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -133,10 +134,11 @@ const Index = () => {
           {/* Main Dashboard */}
           <div className="lg:col-span-3">
             <Tabs defaultValue="analysis" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="analysis">Analysis</TabsTrigger>
                 <TabsTrigger value="predictions">Predictions</TabsTrigger>
                 <TabsTrigger value="technical">Technical</TabsTrigger>
+                <TabsTrigger value="strategies">ML Strategies</TabsTrigger>
                 <TabsTrigger value="news">News</TabsTrigger>
                 <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
               </TabsList>
@@ -168,6 +170,14 @@ const Index = () => {
                   selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
                   assetType={activeTab}
                   currentPrice={activeTab === 'stocks' ? stockData?.price : cryptoData?.price}
+                />
+              </TabsContent>
+
+              <TabsContent value="strategies" className="space-y-6">
+                <MLStrategies 
+                  key={`strategies-${activeTab}-${activeTab === 'stocks' ? selectedStock : selectedCrypto}`}
+                  selectedAsset={activeTab === 'stocks' ? selectedStock : selectedCrypto}
+                  assetType={activeTab}
                 />
               </TabsContent>
 
